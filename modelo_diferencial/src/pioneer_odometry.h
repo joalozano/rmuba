@@ -2,15 +2,20 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/twist.hpp>
-#include <robmovil_msgs/msg/encoder_ticks.hpp>
+#include <robmovil_msgs/msg/multi_encoder_ticks.hpp>
 #include <std_msgs/msg/float64.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 
+// 
+#define WHEEL_BASELINE 0.350
+#define WHEEL_RADIUS 0.05
+#define ENCODER_TICKS 500.0
+
 namespace robmovil
 {
 
-class PioneerOdometry : public rclcpp::Node
+class OmniOdometry : public rclcpp::Node
 {
   public:
 

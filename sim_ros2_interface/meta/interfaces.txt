@@ -4,6 +4,7 @@ example_interfaces/action/Fibonacci
 example_interfaces/srv/AddTwoInts
 geometry_msgs/msg/Point
 geometry_msgs/msg/Pose
+geometry_msgs/msg/PoseArray
 geometry_msgs/msg/PoseStamped
 geometry_msgs/msg/PoseWithCovariance
 geometry_msgs/msg/Quaternion
@@ -41,4 +42,5 @@ std_srvs/srv/Empty
 std_srvs/srv/SetBool
 std_srvs/srv/Trigger
 robmovil_msgs/msg/EncoderTicks
+robmovil_msgs/msg/MultiEncoderTicks
 rosgraph_msgs/msg/Clock

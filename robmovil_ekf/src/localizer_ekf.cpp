@@ -4,7 +4,7 @@
 
 #define NEAREST_NEIGHBOR_RADIUS 1.0
 
-robmovil_ekf::LocalizerEKF::LocalizerEKF(void) : EKFilter(3, 2, 3, 2, 2)
+robmovil_ekf::LocalizerEKF::LocalizerEKF(void) : EKFilter(3, 3, 3, 2, 2)
 {
   delta_t = 0;
 
