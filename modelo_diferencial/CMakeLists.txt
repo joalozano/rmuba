@@ -32,12 +32,12 @@ include_directories(include)
 ## Your package locations should be listed before other locations
 
 ## Declare a C++ executable
-add_executable(pioneer_odometry_node src/pioneer_odometry_node.cpp src/pioneer_odometry.cpp)
+add_executable(omni_odometry_node src/omni_odometry_node.cpp src/omni_odometry.cpp)
 
 ## Specify libraries to link a library or executable target against
 
 # Link libraries
-ament_target_dependencies(pioneer_odometry_node
+ament_target_dependencies(omni_odometry_node
   rclcpp
   std_msgs
   geometry_msgs
@@ -48,7 +48,7 @@ ament_target_dependencies(pioneer_odometry_node
 )
 
 # Install the executable
-install(TARGETS pioneer_odometry_node
+install(TARGETS omni_odometry_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
