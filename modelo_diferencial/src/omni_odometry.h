@@ -18,15 +18,6 @@
 // la suma de l_x y l_y, definidos en la sección 2 del paper provisto y usado en muchas fórmulas
 #define L ((WHEEL_X + WHEEL_Y)/2)
 
-// matrices definidas en las ecuaciones 19 y 21 del paper
-double 	T_for[][] = {{1/WHEEL_RADIUS, -1/WHEEL_RADIUS, -L/WHEEL_RADIUS},
-		     {1/WHEEL_RADIUS, 1/WHEEL_RADIUS, L/WHEEL_RADIUS},
-		     {1/WHEEL_RADIUS, 1/WHEEL_RADIUS, -L/WHEEL_RADIUS},
-		     {1/WHEEL_RADIUS, -1/WHEEL_RADIUS, L/WHEEL_RADIUS}},
-	T_inv[][] = {{WHEEL_RADIUS/4.0, WHEEL_RADIUS/4.0, WHEEL_RADIUS/4.0, WHEEL_RADIUS/4.0}, 
-		     {-WHEEL_RADIUS/4.0, WHEEL_RADIUS/4.0, WHEEL_RADIUS/4.0, -WHEEL_RADIUS/4.0},
-		     {-WHEEL_RADIUS/(4.0 * L), WHEEL_RADIUS/(4.0 * L), -WHEEL_RADIUS/(4.0 * L), WHEEL_RADIUS/(4.0 * L)}};
-
 namespace robmovil
 {
 
@@ -38,7 +29,7 @@ class OmniOdometry : public rclcpp::Node
 
 	void on_velocity_cmd(const geometry_msgs::msg::Twist::SharedPtr twist);
 
-	void on_encoder_ticks(const robmovil_msgs::msg::EncoderTicks::SharedPtr encoder);
+	void on_encoder_ticks(const robmovil_msgs::msg::MultiEncoderTicks::SharedPtr encoder);
 
   private:
 

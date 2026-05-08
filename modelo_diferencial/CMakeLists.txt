@@ -15,6 +15,7 @@ find_package(nav_msgs REQUIRED)
 find_package(robmovil_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
+find_package(angles REQUIRED) # para normalizar ángulos
 
 ###################################
 ## catkin specific configuration ##
@@ -45,6 +46,7 @@ ament_target_dependencies(omni_odometry_node
   robmovil_msgs
   tf2_ros
   tf2_geometry_msgs
+  angles
 )
 
 # Install the executable
