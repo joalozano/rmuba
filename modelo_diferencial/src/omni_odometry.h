@@ -13,10 +13,12 @@
 #define WHEEL_X 0.350
 #define WHEEL_Y 0.350
 // auto-explicativo, radio medido en metros
-#define WHEEL_RADIUS 0.05
+#define WHEEL_RADIUS 0.050
 #define ENCODER_TICKS 500.0
 // la suma de l_x y l_y, definidos en la sección 2 del paper provisto y usado en muchas fórmulas
-#define L ((WHEEL_X + WHEEL_Y)/2)
+#define L ((WHEEL_X + WHEEL_Y)/2.0)
+
+#define ticks_to_rad_per_s ((2 * M_PI * WHEEL_RADIUS) / ENCODER_TICKS)
 
 namespace robmovil
 {

@@ -7,13 +7,13 @@
 #include <angles/angles.h> // para tener normalize_angle
 
 // matrices definidas en las ecuaciones 19 y 21 del paper
-double T_for[WHEEL_COUNT][3] = {{1/WHEEL_RADIUS, -1/WHEEL_RADIUS, -L/WHEEL_RADIUS},
-		     {1/WHEEL_RADIUS, 1/WHEEL_RADIUS, L/WHEEL_RADIUS},
-		     {1/WHEEL_RADIUS, 1/WHEEL_RADIUS, -L/WHEEL_RADIUS},
-		     {1/WHEEL_RADIUS, -1/WHEEL_RADIUS, L/WHEEL_RADIUS}};
-double T_inv[3][WHEEL_COUNT] = {{WHEEL_RADIUS/4.0, WHEEL_RADIUS/4.0, WHEEL_RADIUS/4.0, WHEEL_RADIUS/4.0}, 
-		     {-WHEEL_RADIUS/4.0, WHEEL_RADIUS/4.0, WHEEL_RADIUS/4.0, -WHEEL_RADIUS/4.0},
-		     {-WHEEL_RADIUS/(4.0 * L), WHEEL_RADIUS/(4.0 * L), -WHEEL_RADIUS/(4.0 * L), WHEEL_RADIUS/(4.0 * L)}};
+double T_for[WHEEL_COUNT][3] = {{1, -1, -L},
+		     {1, 1, L},
+		     {1, 1, -L},
+		     {1, -1, L}};
+double T_inv[3][WHEEL_COUNT] = {{1, 1, 1, 1}, 
+		     {-1, 1, 1, -1},
+		     {-1, 1, -1, 1}};
 
 using namespace robmovil;
 
@@ -55,6 +55,7 @@ void OmniOdometry::on_velocity_cmd(const geometry_msgs::msg::Twist::SharedPtr tw
 	std_msgs::msg::Float64 msg_salida;
 	for (int i = 0; i < WHEEL_COUNT; i++) {
 		msg_salida.data = (vx * T_for[i][0] + vy * T_for[i][1] + w * T_for[i][2]);
+		msg_salida.data /= WHEEL_RADIUS;
 
 		pub_vel_[i]->publish(msg_salida);
 	}
@@ -74,28 +75,28 @@ void OmniOdometry::on_encoder_ticks(const robmovil_msgs::msg::MultiEncoderTicks:
 
 	/* Utilizar este delta de tiempo entre momentos */
 	rclcpp::Time current_time(encoder->header.stamp);
-	double delta_t = (current_time - last_ticks_time).seconds();
-
-	if (delta_t == 0.0)
-		return; // validamos que delta_t no es 0, ya que lo usaremos como divisor al calcular velocidades
 
 	double vx = 0, vy = 0, w = 0,
 	       wheel_angular_vel;
 
 	for (int i = 0; i < WHEEL_COUNT; i++) {
 		// convertimos la diferencia de ticks de encoder a radianes y dividimos por el tiempo transcurrido, para obtener la velocidad angular de la rueda
-		wheel_angular_vel = (2 * M_PI) * (encoder->ticks[i] - last_ticks_[i]) / (ENCODER_TICKS * delta_t);
+		wheel_angular_vel = ticks_to_rad_per_s * (encoder->ticks[i] - last_ticks_[i]);
 		// calculamos las distintas velocidades del robot usando la matriz de
 		// transformación de cinemática inversa definida en la ecuación 21
 		vx += wheel_angular_vel * T_inv[0][i];
 		vy += wheel_angular_vel * T_inv[1][i];
-		w += wheel_angular_vel * T_inv[2][i];
+		w  += wheel_angular_vel * T_inv[2][i];
 	}
+	// vx = (radio/4.0) * T * vector_w, y así para vy y w
+	vx /= 4.0;
+	vy /= 4.0;
+	w /= (4.0 * L);
 	
 	// considerando que tenemos vx y vy en el marco del robot, transformamos al marco global usando la transformación definida en la diapo 30 de la clase 06
-	x_ += (vx * cos(theta_) - vy * sin(theta_)) * delta_t;
-	y_ += (vx * sin(theta_) + vy * cos(theta_)) * delta_t;
-	theta_ += w * delta_t;
+	x_ += (vx * cos(theta_) - vy * sin(theta_));
+	y_ += (vx * sin(theta_) + vy * cos(theta_));
+	theta_ += w;
 	theta_ = angles::normalize_angle(theta_);
 
 	// Construir el mensaje odometry utilizando el esqueleto siguiente:
@@ -132,7 +133,7 @@ void OmniOdometry::on_encoder_ticks(const robmovil_msgs::msg::MultiEncoderTicks:
 	/* Mando tambien un transform usando TF */
 
 	geometry_msgs::msg::TransformStamped t;
-	t.header.stamp = this->get_clock()->now();
+	t.header.stamp = current_time;
 	t.header.frame_id = "odom";
 	t.child_frame_id = "base_link";
 
