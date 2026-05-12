@@ -18,7 +18,7 @@
 // la suma de l_x y l_y, definidos en la sección 2 del paper provisto y usado en muchas fórmulas
 #define L ((WHEEL_X + WHEEL_Y)/2.0)
 
-#define ticks_to_rad_per_s ((2 * M_PI * WHEEL_RADIUS) / ENCODER_TICKS)
+#define rads_per_tick ((2 * M_PI) / ENCODER_TICKS)
 
 namespace robmovil
 {
