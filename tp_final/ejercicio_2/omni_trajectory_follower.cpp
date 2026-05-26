@@ -33,6 +33,9 @@ void OmniTrajectoryFollower::handleNewTrajectory(
 
     current_trajectory_ = trajectory_msg;
 
+    if (timer_)
+        timer_->cancel();
+
     timer_ = this->create_wall_timer(
         std::chrono::milliseconds(10),
         std::bind(

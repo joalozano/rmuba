@@ -30,6 +30,13 @@ private:
         double& gy,
         double& ga);
 
+protected:
+
+    void handleNewTrajectory(
+        const robmovil_msgs::msg::Trajectory& trajectory_msg) override;
+
+private:
+
     double x_;
     double y_;
     double theta_;

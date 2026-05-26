@@ -11,6 +11,7 @@
 
 #define POS_TOL 0.05
 
+
 OmniPositionController::OmniPositionController()
     : OmniTrajectoryFollower(),
       x_(0.0),
@@ -31,6 +32,15 @@ OmniPositionController::OmniPositionController()
         this->create_publisher<geometry_msgs::msg::PoseStamped>(
             "/goal_pose",
             rclcpp::QoS(10));
+}
+
+void OmniPositionController::handleNewTrajectory(
+    const robmovil_msgs::msg::Trajectory& trajectory_msg)
+{
+    current_wp_ = 0;
+
+    OmniTrajectoryFollower::handleNewTrajectory(
+        trajectory_msg);
 }
 
 void OmniPositionController::getCurrentPoseFromOdometry(
@@ -128,6 +138,21 @@ bool OmniPositionController::control(
     vx = KX * ex_r;
     vy = KY * ey_r;
     w  = KTH * etheta;
+
+    // desaceleración progresiva cerca del objetivo
+
+    double dist = hypot(ex, ey);
+
+    double scale = 1.0;
+
+    if (dist < 0.3)
+    {
+        scale = dist / 0.3;
+    }
+
+    vx *= scale;
+    vy *= scale;
+    w  *= scale;
 
     // saturaciones
 
