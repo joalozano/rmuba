@@ -1,14 +1,12 @@
 #include "omni_position_controller.h"
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#include <algorithm>
 
 #define KX 0.6
 #define KY 0.6
-#define KTH 0.6
+#define KTH 0.08
 
 #define LOOKAHEAD 0.3
 
-#define TOL 0.05
+#define TOL 0.15
 
 
 OmniPositionController::OmniPositionController() :
@@ -42,25 +40,30 @@ bool OmniPositionController::getPursuitBasedGoal(double& gx, double& gy, double&
 	// calculamos la distancia euclídea de la posición actual a cada punto en la trayectoria actual, arrancando
 	// desde el waypoint actual (uno anterior significaría retroceder)
 	// nos quedamos con el más cercano, que esté a un mínimo de distancia de lookahead
-	for (size_t i = current_wp_; i < wp_count; i++)
+	for (size_t i = current_wp_; i < wp_count - 1; i++)
 	{
 		double px = traj.points[i].transform.translation.x;
 		double py = traj.points[i].transform.translation.y;
 
 		double d =
 			hypot(px - x_, py - y_);
-
+/*
+		if (d < best_dist)
+		{
+			best_dist = d;
+			current_wp_ = i;
+		}
+*/
 		if (d < best_dist && d >= LOOKAHEAD)
 		{
 			best_dist = d;
 			current_wp_ = i;
 			break;
 		}
-		/*if (d >= LOOKAHEAD)
-			break;*/
-	}
 
-	/*for (size_t i = current_wp_; i < traj.points.size(); i++)
+	}
+/*
+	for (size_t i = current_wp_; i < wp_count; i++)
 	{
 		double px = traj.points[i].transform.translation.x;
 		double py = traj.points[i].transform.translation.y;
@@ -73,10 +76,8 @@ bool OmniPositionController::getPursuitBasedGoal(double& gx, double& gy, double&
 			current_wp_ = i;
 			break;
 		}
-	}*/
-
-	/*if (current_wp_ >= (int)traj.points.size())
-		return false;*/
+	}
+*/
 
 	gx = traj.points[current_wp_].transform.translation.x;
 	gy = traj.points[current_wp_].transform.translation.y;
@@ -85,7 +86,7 @@ bool OmniPositionController::getPursuitBasedGoal(double& gx, double& gy, double&
 	double dist_angular = angles::normalize_angle(theta_ - ga);
 
 	//return true;
-	return best_dist >= TOL || dist_angular >= TOL || current_wp_ < (wp_count - 1)
+	return best_dist >= TOL || dist_angular >= TOL || current_wp_ < (wp_count - 1);
 }
 
 bool OmniPositionController::control(const rclcpp::Time& t, double& vx, double& vy, double& w)
@@ -102,11 +103,12 @@ bool OmniPositionController::control(const rclcpp::Time& t, double& vx, double& 
 	double dx = gx - x_;
 	double dy = gy - y_;
 
-	double etheta_r = angles::normalize_angle(theta_ - ga);
+	//double etheta_r = angles::normalize_angle(theta_ - ga);
+	double etheta_r = angles::normalize_angle(ga - theta_);
 
 	// error en frame del robot
 	double ex_r = cos(-theta_) * dx + sin(-theta_) * dy;
-	double ey_r = -sin(-theta_) * ex + cos(-theta_) * ey;
+	double ey_r = -sin(-theta_) * dx + cos(-theta_) * dy;
 
 	// controlamos las velocidades acorde al error y unas variables de ajuste K
 	if (hypot(ex_r, ey_r) < TOL) {
@@ -116,13 +118,14 @@ bool OmniPositionController::control(const rclcpp::Time& t, double& vx, double& 
 		vx = KX * ex_r;
 		vy = KY * ey_r;
 	}
-	if (fabs(etheta_r) < TOL)
-		w  = KTH * etheta_r;
-	else
+	if (fabs(etheta_r) < 0.05)
 		w = 0.0;
+	else
+		w  = KTH * etheta_r;
 
 	// desaceleración progresiva cerca del objetivo
-	/* ESTO ESTÁ BIEN? {
+	/*
+	//ESTO ESTÁ BIEN? {
 	double dist = hypot(ex, ey);
 
 	double scale = 1.0;
@@ -141,23 +144,8 @@ bool OmniPositionController::control(const rclcpp::Time& t, double& vx, double& 
 	vx = std::clamp(vx, -MAX_VEL, MAX_VEL);
 	vy = std::clamp(vy, -MAX_VEL, MAX_VEL);
 	w  = std::clamp(w , -MAX_W, MAX_W);
-	// } */
+	// }
+	*/
 
 	return true;
-}
-
-void publishCurrentGoal(const rclcpp::Time& t, const double& goal_x, const double& goal_y, const double& goal_theta)
-{
-	geometry_msgs::msg::PoseStamped goal;
-
-	goal.header.stamp = this->now();
-	//goal.header.frame_id = "odom";
-	goal.header.frame_id = "map";
-	goal.header.stamp = t;
-	goal.pose.position.x = goal_x;
-	goal.pose.position.y = goal_y;
-	tf2::Quaternion q;
-	q.setRPY(0, 0, goal_theta);
-	goal.pose.orientation = tf2::toMsg(q);
-	goal_pub_->publish(goal);
 }

@@ -29,24 +29,25 @@ int main(int argc, char** argv)
 	traj_msg.header.stamp = node->now();
 	traj_msg.header.frame_id = "odom";
 
-	nav_msgs::msg::Path path;
-	path.header.stamp = node->now();
-	path.header.frame_id = "odom";
+	nav_msgs::msg::Path path_msg;
+	path_msg.header.stamp = node->now();
+	path_msg.header.frame_id = "odom";
 
-	/*double t = 0.0;
+	double t = 0.0;
 	double spacing = 0.1;
-	addSegment(traj_msg, path, -2,-2, -2, 2, spacing, t);
-	addSegment(traj_msg, path, -2,2, 2, 2, spacing, t);
-	addSegment(traj_msg, path, 2,2, 2, -2, spacing, t);
-	addSegment(traj_msg, path, 2,-2, -2, -2, spacing, t); */
+	addSegment(traj_msg, path_msg, 0, 0, 0, -4, spacing, t);
+	addSegment(traj_msg, path_msg, 0, -4, -4, -4, spacing, t);
+	addSegment(traj_msg, path_msg, -4, -4, -4, 0, spacing, t);
+	addSegment(traj_msg, path_msg, -4, 0, 0, 0, spacing, t);
 	
 	// generamos la trayectoria con splines a partir de puntos fijados por el usuario en launch.py
 	// los datos almacenados son t, x, y, theta, de forma que por cada waypoint debe haber cuatro valores en spline_waypoints_data
+/*
 	std::vector<double> spline_waypoints_data = node->declare_parameter<std::vector<double>>("spline_waypoints", {});
 	
 	// si no se definió algún waypoint o si falta algún dato para algún waypoint, arrojamos un error.
 	if (spline_waypoints_data.size() == 0 || spline_waypoints_data.size() % 4 != 0) {
-		RCLCPP_ERROR(trajectory_generator_node->get_logger(),"Trajectory waypoints data is not multiple of 4, it expects: time, position_x, position_y, orientation");
+		RCLCPP_ERROR(node->get_logger(),"Trajectory waypoints data is not multiple of 4, it expects: time, position_x, position_y, orientation");
 		return 1;
 	}
 
@@ -66,9 +67,10 @@ int main(int argc, char** argv)
 	double stepping = node->declare_parameter("stepping", 0.1);
 	
 	build_spline_trajectory(stepping, spline_waypoints, traj_msg, path_msg);
+*/
 
 	traj_pub->publish(traj_msg);
-	path_pub->publish(path);
+	path_pub->publish(path_msg);
 
 	rclcpp::spin(node);
 	rclcpp::shutdown();
@@ -81,10 +83,10 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
 {
 	int wpoint_count = wpoints.size();
 
-	for (int i = 0; i < wpoints - 1; i++) {
+	for (int i = 0; i < wpoint_count - 1; i++) {
 		double ti = wpoints[i][0],
 		       tf = wpoints[i + 1][0],
-		       dt = final_time - initial_time;
+		       dt = tf - ti;
 		double xi = wpoints[i][1],
 		       yi = wpoints[i][2],
 		       thetai = wpoints[i][3];
@@ -102,7 +104,7 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
 		       vai = 0.0001, // definidos vagamente porque para la trayectoria que queremos, el robot siempre girará a derecha; alternativamente, se puede hacer lo mismo que con vx y vy
 		       vxf, vyf, vaf;
 		// calculamos las velocidades finales usando las velocidades iniciales del próximo punto
-		if (i < wpoints - 2) {
+		if (i < wpoint_count - 2) {
 			vxf = (wpoints[i + 2][1] - xf) / (tf - ti);
 			vyf = (wpoints[i + 2][2] - yf) / (tf - ti);
 			vaf = 0.0001;
@@ -150,13 +152,13 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
 			point_msg.transform.translation.y = y;
 			tf2::Quaternion q;
 			q.setRPY(0, 0, a);
-			point_msg.translation.rotation = tf2::toMsg(q);
+			point_msg.transform.rotation = tf2::toMsg(q);
 
 			point_msg.velocity.linear.x  = vx;
 			point_msg.velocity.linear.y  = vy;
 			point_msg.velocity.angular.z = va;
 
-			trayectory_msg.points.push_back( point_msg );
+			trajectory_msg.points.push_back( point_msg );
 
 			// construcción de una lista de poses, para visualizarlo en RViz2
 			geometry_msgs::msg::PoseStamped stamped_pose_msg;
