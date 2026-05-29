@@ -3,194 +3,161 @@
 #include <algorithm>
 
 #define KX 0.6
-#define KY 0.8
-#define KTH 1.0
+#define KY 0.6
+#define KTH 0.6
 
-#define LOOKAHEAD 0.1
+#define LOOKAHEAD 0.3
 
-#define MAX_VEL 0.5
-#define MAX_W 1.0
-
-#define POS_TOL 0.05
+#define TOL 0.05
 
 
-OmniPositionController::OmniPositionController()
-    : OmniTrajectoryFollower(),
-      x_(0.0),
-      y_(0.0),
-      theta_(0),
-      current_wp_(0)
+OmniPositionController::OmniPositionController() :
+	OmniTrajectoryFollower(), x_(0.0), y_(0.0), theta_(0), current_wp_(0)
 {
-    odom_sub_ =
-        this->create_subscription<nav_msgs::msg::Odometry>(
-            "/robot/odometry",
-            rclcpp::QoS(10),
-            std::bind(
-                &OmniPositionController::getCurrentPoseFromOdometry,
-                this,
-                std::placeholders::_1));
+	rclcpp::QoS qos_profile(rclcpp::KeepLast(50));
+	qos_profile.reliable();
+	qos_profile.durability_volatile();
 
-    goal_pub_ =
-        this->create_publisher<geometry_msgs::msg::PoseStamped>(
-            "/goal_pose",
-            rclcpp::QoS(10));
+	goal_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/goal_pose", rclcpp::QoS(10));
+	odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>("/robot/odometry", rclcpp::QoS(10), std::bind(&OmniPositionController::getCurrentPoseFromOdometry, this, std::placeholders::_1));
 }
 
-void OmniPositionController::handleNewTrajectory(
-    const robmovil_msgs::msg::Trajectory& trajectory_msg)
+void OmniPositionController::getCurrentPoseFromOdometry(const nav_msgs::msg::Odometry& odom)
 {
-    current_wp_ = 0;
+	x_ = odom.pose.pose.position.x;
+	y_ = odom.pose.pose.position.y;
 
-    OmniTrajectoryFollower::handleNewTrajectory(
-        trajectory_msg);
+	theta_ = tf2::getYaw(odom.pose.pose.orientation);
 }
 
-void OmniPositionController::getCurrentPoseFromOdometry(
-    const nav_msgs::msg::Odometry& odom)
+bool OmniPositionController::getPursuitBasedGoal(double& gx, double& gy, double& ga)
 {
-    x_ = odom.pose.pose.position.x;
-    y_ = odom.pose.pose.position.y;
+	const auto& traj = getTrajectory();
+	size_t wp_count = traj.points.size();
+	/*if (wp_count == 0)
+		return false;*/
 
-    theta_ = tf2::getYaw(odom.pose.pose.orientation);
+	double best_dist = DBL_MAX;
+
+	// calculamos la distancia euclídea de la posición actual a cada punto en la trayectoria actual, arrancando
+	// desde el waypoint actual (uno anterior significaría retroceder)
+	// nos quedamos con el más cercano, que esté a un mínimo de distancia de lookahead
+	for (size_t i = current_wp_; i < wp_count; i++)
+	{
+		double px = traj.points[i].transform.translation.x;
+		double py = traj.points[i].transform.translation.y;
+
+		double d =
+			hypot(px - x_, py - y_);
+
+		if (d < best_dist && d >= LOOKAHEAD)
+		{
+			best_dist = d;
+			current_wp_ = i;
+			break;
+		}
+		/*if (d >= LOOKAHEAD)
+			break;*/
+	}
+
+	/*for (size_t i = current_wp_; i < traj.points.size(); i++)
+	{
+		double px = traj.points[i].transform.translation.x;
+		double py = traj.points[i].transform.translation.y;
+
+		double d =
+			hypot(px - x_, py - y_);
+
+		if (d >= LOOKAHEAD)
+		{
+			current_wp_ = i;
+			break;
+		}
+	}*/
+
+	/*if (current_wp_ >= (int)traj.points.size())
+		return false;*/
+
+	gx = traj.points[current_wp_].transform.translation.x;
+	gy = traj.points[current_wp_].transform.translation.y;
+
+	ga = tf2::getYaw(traj.points[current_wp_].transform.rotation);
+	double dist_angular = angles::normalize_angle(theta_ - ga);
+
+	//return true;
+	return best_dist >= TOL || dist_angular >= TOL || current_wp_ < (wp_count - 1)
 }
 
-bool OmniPositionController::getPursuitBasedGoal(
-    double& gx,
-    double& gy,
-    double& ga)
+bool OmniPositionController::control(const rclcpp::Time& t, double& vx, double& vy, double& w)
 {
-    const auto& traj = getTrajectory();
+	double gx, gy, ga;
+	// inicializamos la siguiente pose objetivo, o cortamos con el seguimiento si ya se terminó la trayectoria
+	if (!getPursuitBasedGoal(gx, gy, ga))
+		return false;
 
-    if (traj.points.empty())
-        return false;
+	// publicamos la pose objetivo a RViz2
+	publishCurrentGoal(t, gx, gy, ga);
 
-    double best_dist = 1e9;
+	// calculamos el error inicial, y luego transformamos al marco del goal, acorde a la diapositiva 13 de la clase 8
+	double dx = gx - x_;
+	double dy = gy - y_;
 
-    for (size_t i = current_wp_; i < traj.points.size(); i++)
-    {
-        double px = traj.points[i].transform.translation.x;
-        double py = traj.points[i].transform.translation.y;
+	double etheta_r = angles::normalize_angle(theta_ - ga);
 
-        double d =
-            hypot(px - x_, py - y_);
+	// error en frame del robot
+	double ex_r = cos(-theta_) * dx + sin(-theta_) * dy;
+	double ey_r = -sin(-theta_) * ex + cos(-theta_) * ey;
 
-        if (d < best_dist)
-        {
-            best_dist = d;
-            current_wp_ = i;
-        }
-    }
+	// controlamos las velocidades acorde al error y unas variables de ajuste K
+	if (hypot(ex_r, ey_r) < TOL) {
+		vx = 0.0; // estamos cerca en el plano x,y de la posición deseada, dejamos al robot quieto y rotamos
+		vy = 0.0;
+	} else {
+		vx = KX * ex_r;
+		vy = KY * ey_r;
+	}
+	if (fabs(etheta_r) < TOL)
+		w  = KTH * etheta_r;
+	else
+		w = 0.0;
 
-    for (size_t i = current_wp_; i < traj.points.size(); i++)
-    {
-        double px = traj.points[i].transform.translation.x;
-        double py = traj.points[i].transform.translation.y;
+	// desaceleración progresiva cerca del objetivo
+	/* ESTO ESTÁ BIEN? {
+	double dist = hypot(ex, ey);
 
-        double d =
-            hypot(px - x_, py - y_);
+	double scale = 1.0;
 
-        if (d >= LOOKAHEAD)
-        {
-            current_wp_ = i;
-            break;
-        }
-    }
+	if (dist < 0.3)
+	{
+		scale = dist / 0.3;
+	}
 
-    if (current_wp_ >= (int)traj.points.size())
-        return false;
+	vx *= scale;
+	vy *= scale;
+	w  *= scale;
 
-    gx = traj.points[current_wp_].transform.translation.x;
-    gy = traj.points[current_wp_].transform.translation.y;
+	// saturaciones
 
-    ga = tf2::getYaw(
-        traj.points[current_wp_].transform.rotation);
+	vx = std::clamp(vx, -MAX_VEL, MAX_VEL);
+	vy = std::clamp(vy, -MAX_VEL, MAX_VEL);
+	w  = std::clamp(w , -MAX_W, MAX_W);
+	// } */
 
-    return true;
+	return true;
 }
 
-bool OmniPositionController::control(
-    const rclcpp::Time& t,
-    double& vx,
-    double& vy,
-    double& w)
+void publishCurrentGoal(const rclcpp::Time& t, const double& goal_x, const double& goal_y, const double& goal_theta)
 {
-    double gx, gy, ga;
+	geometry_msgs::msg::PoseStamped goal;
 
-    if (!getPursuitBasedGoal(gx, gy, ga))
-        return false;
-
-    double ex = gx - x_;
-    double ey = gy - y_;
-
-    double etheta =
-        angles::normalize_angle(ga - theta_);
-
-    // error en frame robot
-
-    double ex_r =
-        cos(theta_) * ex +
-        sin(theta_) * ey;
-
-    double ey_r =
-       -sin(theta_) * ex +
-        cos(theta_) * ey;
-
-    // control P
-
-    vx = KX * ex_r;
-    vy = KY * ey_r;
-    w  = KTH * etheta;
-
-    // desaceleración progresiva cerca del objetivo
-
-    double dist = hypot(ex, ey);
-
-    double scale = 1.0;
-
-    if (dist < 0.3)
-    {
-        scale = dist / 0.3;
-    }
-
-    vx *= scale;
-    vy *= scale;
-    w  *= scale;
-
-    // saturaciones
-
-    vx = std::clamp(vx, -MAX_VEL, MAX_VEL);
-    vy = std::clamp(vy, -MAX_VEL, MAX_VEL);
-    w  = std::clamp(w , -MAX_W, MAX_W);
-
-    // publish goal
-
-    geometry_msgs::msg::PoseStamped goal;
-
-    goal.header.stamp = this->now();
-    goal.header.frame_id = "odom";
-
-    goal.pose.position.x = gx;
-    goal.pose.position.y = gy;
-
-    tf2::Quaternion q;
-    q.setRPY(0, 0, ga);
-
-    goal.pose.orientation =
-        tf2::toMsg(q);
-
-    goal_pub_->publish(goal);
-
-    // finish condition
-
-    dist = hypot(ex, ey);
-
-    if (current_wp_ ==
-            (int)getTrajectory().points.size()-1 &&
-        dist < POS_TOL &&
-        fabs(etheta) < 0.05)
-    {
-        return false;
-    }
-
-    return true;
+	goal.header.stamp = this->now();
+	//goal.header.frame_id = "odom";
+	goal.header.frame_id = "map";
+	goal.header.stamp = t;
+	goal.pose.position.x = goal_x;
+	goal.pose.position.y = goal_y;
+	tf2::Quaternion q;
+	q.setRPY(0, 0, goal_theta);
+	goal.pose.orientation = tf2::toMsg(q);
+	goal_pub_->publish(goal);
 }

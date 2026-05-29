@@ -12,41 +12,25 @@ class OmniPositionController : public OmniTrajectoryFollower
 {
 public:
 
-    OmniPositionController();
+	OmniPositionController();
 
-    bool control(
-        const rclcpp::Time& t,
-        double& vx,
-        double& vy,
-        double& w) override;
-
-protected:
-
-    virtual void handleNewTrajectory(
-        const robmovil_msgs::msg::Trajectory& trajectory_msg) override;
+	bool control(const rclcpp::Time& t, double& vx, double& vy, double& w);
 
 private:
 
-    void getCurrentPoseFromOdometry(
-        const nav_msgs::msg::Odometry& odom);
+	rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr goal_pub_;
+	rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
 
-    //bool getPursuitBasedGoal(const rclcpp::Time& t,
-    bool getPursuitBasedGoal(
-        double& gx,
-        double& gy,
-        double& ga);
+	int current_wp_ = 0;
+	double x_ = 0.0;
+	double y_ = 0.0;
+	double theta_ = 0.0;
 
-	/*tf2_ros::Buffer tfBuffer_;
-	tf2_ros::TransformListener transform_listener_;
-	rclcpp::Publisher<geometry_msgs>*/
+	void getCurrentPoseFromOdometry(const nav_msgs::msg::Odometry& odom);
 
-    double x_ = 0.0;
-    double y_ = 0.0;
-    double theta_ = 0.0;
+	// Implementaremos únicamente pursuit-based trajectories para el TP
+	bool getPursuitBasedGoal(double& gx, double& gy, double& ga);
 
-    int current_wp_;
-
-    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
-
-    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr goal_pub_;
+	// Publica los waypoints para poder visualizarlos en RViz2
+	void publishCurrentGoal(const rclcpp::Time& t, const double& goal_x, const double& goal_y, const double& goal_theta);
 };
