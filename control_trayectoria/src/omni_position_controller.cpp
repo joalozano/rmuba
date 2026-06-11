@@ -6,7 +6,7 @@
 
 #define LOOKAHEAD 0.3
 
-#define TOL 0.15
+#define TOL 0.05
 
 
 OmniPositionController::OmniPositionController() :
@@ -32,15 +32,15 @@ bool OmniPositionController::getPursuitBasedGoal(double& gx, double& gy, double&
 {
 	const auto& traj = getTrajectory();
 	size_t wp_count = traj.points.size();
-	/*if (wp_count == 0)
-		return false;*/
+	if (wp_count == 0)
+		return false;
 
-	double best_dist = DBL_MAX;
+	//double best_dist = DBL_MAX;
 
 	// calculamos la distancia euclídea de la posición actual a cada punto en la trayectoria actual, arrancando
 	// desde el waypoint actual (uno anterior significaría retroceder)
 	// nos quedamos con el más cercano, que esté a un mínimo de distancia de lookahead
-	for (size_t i = current_wp_; i < wp_count - 1; i++)
+	/*for (size_t i = current_wp_; i < wp_count - 1; i++)
 	{
 		double px = traj.points[i].transform.translation.x;
 		double py = traj.points[i].transform.translation.y;
@@ -53,7 +53,7 @@ bool OmniPositionController::getPursuitBasedGoal(double& gx, double& gy, double&
 			best_dist = d;
 			current_wp_ = i;
 		}
-*/
+
 		if (d < best_dist && d >= LOOKAHEAD)
 		{
 			best_dist = d;
@@ -62,31 +62,33 @@ bool OmniPositionController::getPursuitBasedGoal(double& gx, double& gy, double&
 		}
 
 	}
-/*
-	for (size_t i = current_wp_; i < wp_count; i++)
-	{
-		double px = traj.points[i].transform.translation.x;
-		double py = traj.points[i].transform.translation.y;
-
-		double d =
-			hypot(px - x_, py - y_);
-
-		if (d >= LOOKAHEAD)
+*/
+	ga = tf2::getYaw(traj.points[current_wp_].transform.rotation);
+	if (fabs(angles::normalize_angle(ga - theta_)) < TOL) {
+		for (size_t i = current_wp_; i < wp_count; i++)
 		{
-			current_wp_ = i;
-			break;
+			double px = traj.points[i].transform.translation.x;
+			double py = traj.points[i].transform.translation.y;
+
+			double d = hypot(px - x_, py - y_);
+
+			if (d >= LOOKAHEAD)
+			{
+				current_wp_ = i;
+				break;
+			}
 		}
 	}
-*/
 
 	gx = traj.points[current_wp_].transform.translation.x;
 	gy = traj.points[current_wp_].transform.translation.y;
 
 	ga = tf2::getYaw(traj.points[current_wp_].transform.rotation);
-	double dist_angular = angles::normalize_angle(theta_ - ga);
+	double dist_angular = fabs(angles::normalize_angle(ga - theta_));
+	double dist_linear = hypot(gx - x_, gy - y_);
 
 	//return true;
-	return best_dist >= TOL || dist_angular >= TOL || current_wp_ < (wp_count - 1);
+	return dist_linear >= TOL || dist_angular >= TOL || current_wp_ < (wp_count - 1);
 }
 
 bool OmniPositionController::control(const rclcpp::Time& t, double& vx, double& vy, double& w)
@@ -95,7 +97,7 @@ bool OmniPositionController::control(const rclcpp::Time& t, double& vx, double& 
 	// inicializamos la siguiente pose objetivo, o cortamos con el seguimiento si ya se terminó la trayectoria
 	if (!getPursuitBasedGoal(gx, gy, ga))
 		return false;
-
+	
 	// publicamos la pose objetivo a RViz2
 	publishCurrentGoal(t, gx, gy, ga);
 
@@ -103,12 +105,11 @@ bool OmniPositionController::control(const rclcpp::Time& t, double& vx, double& 
 	double dx = gx - x_;
 	double dy = gy - y_;
 
-	//double etheta_r = angles::normalize_angle(theta_ - ga);
 	double etheta_r = angles::normalize_angle(ga - theta_);
 
 	// error en frame del robot
-	double ex_r = cos(-theta_) * dx + sin(-theta_) * dy;
-	double ey_r = -sin(-theta_) * dx + cos(-theta_) * dy;
+	double ex_r = cos(theta_) * dx + sin(theta_) * dy;
+	double ey_r = -sin(theta_) * dx + cos(theta_) * dy;
 
 	// controlamos las velocidades acorde al error y unas variables de ajuste K
 	if (hypot(ex_r, ey_r) < TOL) {
@@ -118,34 +119,14 @@ bool OmniPositionController::control(const rclcpp::Time& t, double& vx, double& 
 		vx = KX * ex_r;
 		vy = KY * ey_r;
 	}
-	if (fabs(etheta_r) < 0.05)
-		w = 0.0;
-	else
-		w  = KTH * etheta_r;
+	w  = KTH * etheta_r;
 
-	// desaceleración progresiva cerca del objetivo
-	/*
-	//ESTO ESTÁ BIEN? {
-	double dist = hypot(ex, ey);
+	RCLCPP_INFO(this->get_logger(), "atan2: %.2f, vx: %.2f, vy: %.2f, w: %.2f",
+						atan2(dy, dx), vx, vy, w);
 
-	double scale = 1.0;
+	RCLCPP_INFO(this->get_logger(), "goal_x: %.2f, goal_y: %.2f, goal_a: %.2f, current_x: %.2f, current_y: %.2f, current_a: %.2f",
+						gx, gy, ga, x_, y_, theta_);
 
-	if (dist < 0.3)
-	{
-		scale = dist / 0.3;
-	}
-
-	vx *= scale;
-	vy *= scale;
-	w  *= scale;
-
-	// saturaciones
-
-	vx = std::clamp(vx, -MAX_VEL, MAX_VEL);
-	vy = std::clamp(vy, -MAX_VEL, MAX_VEL);
-	w  = std::clamp(w , -MAX_W, MAX_W);
-	// }
-	*/
 
 	return true;
 }

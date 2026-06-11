@@ -12,7 +12,6 @@
 
 
 void build_spline_trajectory(double, std::vector<std::vector<double>>&, robmovil_msgs::msg::Trajectory&, nav_msgs::msg::Path&);
-void addSegment(robmovil_msgs::msg::Trajectory&, nav_msgs::msg::Path&, double, double, double, double, double, double&);
 
 int main(int argc, char** argv)
 {
@@ -32,17 +31,9 @@ int main(int argc, char** argv)
 	nav_msgs::msg::Path path_msg;
 	path_msg.header.stamp = node->now();
 	path_msg.header.frame_id = "odom";
-
-	double t = 0.0;
-	double spacing = 0.1;
-	addSegment(traj_msg, path_msg, 0, 0, 0, -4, spacing, t);
-	addSegment(traj_msg, path_msg, 0, -4, -4, -4, spacing, t);
-	addSegment(traj_msg, path_msg, -4, -4, -4, 0, spacing, t);
-	addSegment(traj_msg, path_msg, -4, 0, 0, 0, spacing, t);
 	
 	// generamos la trayectoria con splines a partir de puntos fijados por el usuario en launch.py
 	// los datos almacenados son t, x, y, theta, de forma que por cada waypoint debe haber cuatro valores en spline_waypoints_data
-/*
 	std::vector<double> spline_waypoints_data = node->declare_parameter<std::vector<double>>("spline_waypoints", {});
 	
 	// si no se definió algún waypoint o si falta algún dato para algún waypoint, arrojamos un error.
@@ -53,7 +44,7 @@ int main(int argc, char** argv)
 
 	// guardamos los waypoints como una matriz de n_puntos x 4, donde wp[0] es t, wp[1] es x, etc
 	std::vector<std::vector<double>> spline_waypoints;
-	for (int i = 0; i < spline_waypoints_data.size(); i++) {
+	for (int i = 0; i < spline_waypoints_data.size(); i += 4) {
 		std::vector<double> wp_data;
 		for (int j = i; j < i + 4; j++) {
 			double value = static_cast<double>(spline_waypoints_data[j]);
@@ -67,7 +58,6 @@ int main(int argc, char** argv)
 	double stepping = node->declare_parameter("stepping", 0.1);
 	
 	build_spline_trajectory(stepping, spline_waypoints, traj_msg, path_msg);
-*/
 
 	traj_pub->publish(traj_msg);
 	path_pub->publish(path_msg);
@@ -89,10 +79,10 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
 		       dt = tf - ti;
 		double xi = wpoints[i][1],
 		       yi = wpoints[i][2],
-		       thetai = wpoints[i][3];
+		       ai = wpoints[i][3];
 		double xf = wpoints[i + 1][1],
 		       yf = wpoints[i + 1][2],
-		       thetaf = wpoints[i + 1][3];
+		       af = wpoints[i + 1][3];
 		
 		// si hay un waypoint mal puesto (tiempo de llegada menor o igual al punto siguiente), cortamos la generación de la trayectoria; hace falta comunicar al usuario que hay un error
 		if ((tf - ti) <= 0)
@@ -117,18 +107,24 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
 		// coeficientes para calcular x(t)
 		double a0 = xi,
 		       a1 = vxi,
-		       a2 = (3/(tf*tf))*(xf - xi) - (2/tf)*vxi - vxf/tf,
-		       a3 = (-2/(tf*tf*tf))*(xf - xi) + (vxf - vxi)/(tf*tf);
+		       a2 = (3/(dt*dt))*(xf - xi) - (2/dt)*vxi - vxf/dt,
+		       a3 = (-2/(dt*dt*dt))*(xf - xi) + (vxf - vxi)/(dt*dt);
+		       //a2 = (3/(tf*tf))*(xf - xi) - (2/tf)*vxi - vxf/tf,
+		       //a3 = (-2/(tf*tf*tf))*(xf - xi) + (vxf - vxi)/(tf*tf);
 		// idem para y(t)
 		double b0 = yi,
 		       b1 = vyi,
-		       b2 = (3/(tf*tf))*(yf - yi) - (2/tf)*vyi - vyf/tf,
-		       b3 = (-2/(tf*tf*tf))*(yf - yi) + (vyf - vyi)/(tf*tf);
+		       b2 = (3/(dt*dt))*(yf - yi) - (2/dt)*vyi - vyf/dt,
+		       b3 = (-2/(dt*dt*dt))*(yf - yi) + (vyf - vyi)/(dt*dt);
+		       //b2 = (3/(tf*tf))*(yf - yi) - (2/tf)*vyi - vyf/tf,
+		       //b3 = (-2/(tf*tf*tf))*(yf - yi) + (vyf - vyi)/(tf*tf);
 		// idem para theta(t), aunque sería posible calcular la dirección opuesta al origen con atan2(y - y_world,x - x_world)
-		double c0 = thetai,
+		double c0 = ai,
 		       c1 = vai,
-		       c2 = (3/(tf*tf))*(thetaf - thetai) - (2/tf)*vai - vaf/tf,
-		       c3 = (-2/(tf*tf*tf))*(thetaf - thetai) + (vaf - vai)/(tf*tf);
+		       c2 = (3/(dt*dt))*(af - ai) - (2/dt)*vai - vaf/dt,
+		       c3 = (-2/(dt*dt*dt))*(af - ai) + (vaf - vai)/(dt*dt);
+		       //c2 = (3/(tf*tf))*(thetaf - thetai) - (2/tf)*vai - vaf/tf,
+		       //c3 = (-2/(tf*tf*tf))*(thetaf - thetai) + (vaf - vai)/(tf*tf);
 		
 		// calculamos todos los puntos intermedios en la trayectoria, proveyendo posibles velocidades esperadas en cada punto
 		for (double t = ti; t <= tf; t += stepping) {
@@ -172,64 +168,5 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
 
 			path_msg.poses.push_back(stamped_pose_msg);  
 		}
-	}
-}
-
-
-void addSegment(robmovil_msgs::msg::Trajectory& traj, nav_msgs::msg::Path& path, double x0, double y0, double x1, double y1, double spacing, double& accumulated_time)
-{
-	double dx = x1 - x0;
-	double dy = y1 - y0;
-
-	double length = hypot(dx, dy);
-
-	int steps =
-		std::max(1, (int)(length / spacing));
-
-	for (int i = 0; i <= steps; i++)
-	{
-		double alpha =
-			(double)i / (double)steps;
-
-		double x =
-			x0 + alpha * dx;
-
-		double y =
-			y0 + alpha * dy;
-
-		// orientación opuesta al centro
-
-		double theta =
-			atan2(y, x);
-
-		robmovil_msgs::msg::TrajectoryPoint point;
-
-		point.time_from_start =
-			rclcpp::Duration::from_seconds(
-				accumulated_time);
-
-		point.transform.translation.x = x;
-		point.transform.translation.y = y;
-
-		tf2::Quaternion q;
-		q.setRPY(0, 0, theta);
-
-		point.transform.rotation =
-			tf2::toMsg(q);
-
-		traj.points.push_back(point);
-
-		geometry_msgs::msg::PoseStamped pose;
-
-		pose.header.frame_id = "odom";
-
-		pose.pose.position.x = x;
-		pose.pose.position.y = y;
-		pose.pose.orientation =
-			tf2::toMsg(q);
-
-		path.poses.push_back(pose);
-
-		accumulated_time += 0.3;
 	}
 }

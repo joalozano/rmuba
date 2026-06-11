@@ -145,7 +145,10 @@ void OmniOdometry::on_encoder_ticks(const robmovil_msgs::msg::MultiEncoderTicks:
 
 	tf_broadcaster_->sendTransform(t);
 
-	/*RCLCPP_INFO(this->get_logger(),
+	RCLCPP_INFO(this->get_logger(),
+    "x=%f y=%f theta=%f",
+    x_, y_, theta_);
+	RCLCPP_INFO(this->get_logger(),
     "dt=%f vx=%f vy=%f w=%f",
-    delta_t, vx, vy, w);*/
+    delta_t, vx, vy, w);
 }
