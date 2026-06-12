@@ -53,12 +53,20 @@ void OmniOdometry::on_velocity_cmd(const geometry_msgs::msg::Twist::SharedPtr tw
 	// publicamos cada velocidad para cada rueda
 	// T_for es la matriz de transformación para cinemática directa/forward
 	std_msgs::msg::Float64 msg_salida;
-	for (int i = 0; i < WHEEL_COUNT; i++) {
+	msg_salida.data = (vx - vy - L*w) / WHEEL_RADIUS;
+	pub_vel_[0]->publish(msg_salida);
+	msg_salida.data = (vx + vy + L*w) / WHEEL_RADIUS;
+	pub_vel_[1]->publish(msg_salida);
+	msg_salida.data = (vx + vy - L*w) / WHEEL_RADIUS;
+	pub_vel_[2]->publish(msg_salida);
+	msg_salida.data = (vx - vy + L*w) / WHEEL_RADIUS;
+	pub_vel_[3]->publish(msg_salida);
+	/*for (int i = 0; i < WHEEL_COUNT; i++) {
 		msg_salida.data = (vx * T_for[i][0] + vy * T_for[i][1] + w * T_for[i][2]);
 		msg_salida.data /= WHEEL_RADIUS;
 
 		pub_vel_[i]->publish(msg_salida);
-	}
+	}*/
 }
 
 void OmniOdometry::on_encoder_ticks(const robmovil_msgs::msg::MultiEncoderTicks::SharedPtr encoder)
@@ -73,6 +81,9 @@ void OmniOdometry::on_encoder_ticks(const robmovil_msgs::msg::MultiEncoderTicks:
 		return;
 	}
 
+	RCLCPP_INFO(this->get_logger(),
+    "tck1=%d tck2=%d tck3=%d tck4=%d",
+    encoder->ticks[0], encoder->ticks[1], encoder->ticks[2], encoder->ticks[3]);
 	/* Utilizar este delta de tiempo entre momentos */
 	rclcpp::Time current_time(encoder->header.stamp);
 
@@ -80,7 +91,7 @@ void OmniOdometry::on_encoder_ticks(const robmovil_msgs::msg::MultiEncoderTicks:
 		   vx = 0, vy = 0, w = 0,
 	       wheel_angular_vel;
 
-	for (int i = 0; i < WHEEL_COUNT; i++) {
+	/*for (int i = 0; i < WHEEL_COUNT; i++) {
 		// convertimos la diferencia de ticks de encoder a radianes y dividimos por el tiempo transcurrido, para obtener la velocidad angular de la rueda
 		wheel_angular_vel = (rads_per_tick * (encoder->ticks[i] - last_ticks_[i])) / delta_t;
 		// calculamos las distintas velocidades del robot usando la matriz de
@@ -92,7 +103,8 @@ void OmniOdometry::on_encoder_ticks(const robmovil_msgs::msg::MultiEncoderTicks:
 	// vx = (radio/4.0) * T * vector_w, y así para vy y w
 	vx *= (WHEEL_RADIUS / 4.0);
 	vy *= (WHEEL_RADIUS / 4.0);
-	w *= (WHEEL_RADIUS / (4.0 * L));
+	w *= (WHEEL_RADIUS / (4.0 * L));*/
+	vx = ((rads_per_tick * (encoder->ticks[i] - last_ticks_[i]) / delta_t) + ) * ()
 	
 	// considerando que tenemos vx y vy en el marco del robot, transformamos al marco global usando la transformación definida en la diapo 30 de la clase 06
 	x_ += (vx * cos(theta_) - vy * sin(theta_)) * delta_t;

@@ -2,7 +2,7 @@
 
 #define KX 0.6
 #define KY 0.6
-#define KTH 0.08
+#define KTH 0.6
 
 #define LOOKAHEAD 0.3
 
@@ -34,7 +34,7 @@ bool OmniPositionController::getPursuitBasedGoal(double& gx, double& gy, double&
 	size_t wp_count = traj.points.size();
 	if (wp_count == 0)
 		return false;
-
+	RCLCPP_INFO(this->get_logger(), "wp_count: %lu", wp_count);
 	//double best_dist = DBL_MAX;
 
 	// calculamos la distancia euclídea de la posición actual a cada punto en la trayectoria actual, arrancando
