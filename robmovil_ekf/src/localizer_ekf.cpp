@@ -93,8 +93,8 @@ void robmovil_ekf::LocalizerEKF::makeA(void)
 {
   /* COMPLETAR: Utilizando variables globales x, u y delta_t */
   
-  A(1,3) = -u(1)*delta_t*sin(x(3));
-  A(2,3) = u(1)*delta_t*cos(x(3));
+  A(1,3) = -*delta_t*sin(x(3)) - u(2)*delta_t*cos(x(3));
+  A(2,3) = u(1)*delta_t*cos(x(3)) - u(2)*delta_t*sin(x(3));
 
   RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "A: %d", A);
 }
@@ -171,7 +171,7 @@ void robmovil_ekf::LocalizerEKF::makeH(void)
     H(1,1) = -dx/sqrt(dx*dx + dy*dy);
     H(1,2) = -dy/sqrt(dx*dx + dy*dy);
     H(2,1) = dy/(dx*dx + dy*dy);
-    H(2,2) = -dx/sqrt(dx*dx + dy*dy);
+    H(2,2) = -dx/(dx*dx + dy*dy);
 
   }
 
@@ -214,8 +214,8 @@ void robmovil_ekf::LocalizerEKF::makeProcess(void)
    * Guardar el resultado en la variable global x */
    LocalizerEKF::Vector x_old(x); // X_t-1
    
-  x(1) = x_old(1) + u(1)*cos(x_old(3))*delta_t;
-  x(2) = x_old(2) + u(1)*sin(x_old(3))*delta_t;
+  x(1) = x_old(1) + u(1)*cos(x_old(3))*delta_t - u(2)*sin(x_old(3))*delta_t;
+  x(2) = x_old(2) + u(1)*sin(x_old(3))*delta_t + u(2)*cos(x_old(3))*delta_t;
   x(3) = angles::normalize_angle(x_old(3) + u(2)*delta_t);
    
 
