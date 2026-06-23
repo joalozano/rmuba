@@ -20,7 +20,7 @@ namespace robmovil_ekf
    * Localizador EKF
    *
    * Estado: X = (x,y,theta)
-   * Input: U = (v,w)
+   * Input: U = (vx,vy,w)
    * Medicion: Z = (r,rho)
    * Se incluyen dos ruidos aditivos para modelo de proceso y sensado, respectivamente
    */
