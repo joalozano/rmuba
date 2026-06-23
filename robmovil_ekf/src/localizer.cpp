@@ -5,7 +5,7 @@
 robmovil_ekf::Localizer::Localizer() :
   Node("localizer_node"), u(2)
 {
-  u(1) = u(2) = 0;
+  u(1) = u(2) = u(3) = 0;
   set_map = true;
   tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
 
