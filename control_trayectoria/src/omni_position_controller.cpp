@@ -47,7 +47,6 @@ bool OmniPositionController::getPursuitBasedGoal(double& gx, double& gy, double&
 
 		double d =
 			hypot(px - x_, py - y_);
-/*
 		if (d < best_dist)
 		{
 			best_dist = d;
@@ -88,7 +87,7 @@ bool OmniPositionController::getPursuitBasedGoal(double& gx, double& gy, double&
 	double dist_linear = hypot(gx - x_, gy - y_);
 
 	//return true;
-	return dist_linear >= TOL || dist_angular >= TOL || current_wp_ < (wp_count - 1);
+	return dist_linear >= TOL || dist_angular >= TOL;
 }
 
 bool OmniPositionController::control(const rclcpp::Time& t, double& vx, double& vy, double& w)

@@ -41,8 +41,8 @@ def generate_launch_description():
 
         Node(
             package='modelo_diferencial',
-            executable='pioneer_odometry_node',
-            name='pioneer_odometry',
+            executable='omni_odometry_node',
+            name='omni_odometry',
             output='screen',
             parameters=[{"use_sim_time": True}]
         ),

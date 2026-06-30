@@ -93,7 +93,7 @@ void robmovil_ekf::LocalizerEKF::makeA(void)
 {
   /* COMPLETAR: Utilizando variables globales x, u y delta_t */
   
-  A(1,3) = -*delta_t*sin(x(3)) - u(2)*delta_t*cos(x(3));
+  A(1,3) = -u(1)*delta_t*sin(x(3)) - u(2)*delta_t*cos(x(3));
   A(2,3) = u(1)*delta_t*cos(x(3)) - u(2)*delta_t*sin(x(3));
 
   RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "A: %d", A);
@@ -216,7 +216,7 @@ void robmovil_ekf::LocalizerEKF::makeProcess(void)
    
   x(1) = x_old(1) + u(1)*cos(x_old(3))*delta_t - u(2)*sin(x_old(3))*delta_t;
   x(2) = x_old(2) + u(1)*sin(x_old(3))*delta_t + u(2)*cos(x_old(3))*delta_t;
-  x(3) = angles::normalize_angle(x_old(3) + u(2)*delta_t);
+  x(3) = angles::normalize_angle(x_old(3) + u(3)*delta_t);
    
 
   RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Process model: X_t-1: %d, X_t: %d, delta_t: %d", x_old, x, delta_t);
@@ -245,7 +245,7 @@ bool robmovil_ekf::LocalizerEKF::find_corresponding_landmark(const tf2::Vector3&
    * 
    * El resultado debe devolverse por la referencia corresponding_landmark */
   
-  //bool found = false;
+  bool found = false;
 
   float min_distance = std::numeric_limits<float>::max();
    
@@ -253,16 +253,14 @@ bool robmovil_ekf::LocalizerEKF::find_corresponding_landmark(const tf2::Vector3&
   {
     /* COMPLETAR */
 	float dist = (measured_landmark - map_landmarks[i]).length();
-	  if (dist < min_distance) {
+	  if (dist < delta_radio && dist < min_distance) {
 		min_distance = dist;
-		if (dist < delta_radio) {
-			corresponding_landmark = map_landmarks[i];
-			return true;
-		}
+		corresponding_landmark = map_landmarks[i];
+		found = true;
 	  }
   }
 
-  return false;
+  return found;
 }
 
 /** Convierte una medicion en coordenadas polares (relativa al sistema de coordenadas del robot) a un

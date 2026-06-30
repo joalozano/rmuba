@@ -83,21 +83,21 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
 		double xf = wpoints[i + 1][1],
 		       yf = wpoints[i + 1][2],
 		       af = wpoints[i + 1][3];
-		
+		/*
 		// si hay un waypoint mal puesto (tiempo de llegada menor o igual al punto siguiente), cortamos la generación de la trayectoria; hace falta comunicar al usuario que hay un error
 		if ((tf - ti) <= 0)
 			break;
-
+		*/
 		// parámetros de curvatura: velocidades esperadas, calculadas de la forma más simple posible.
 		double vxi = (xf - xi) / (tf - ti),
 		       vyi = (yf - yi) / (tf - ti),
-		       vai = 0.0001, // definidos vagamente porque para la trayectoria que queremos, el robot siempre girará a derecha; alternativamente, se puede hacer lo mismo que con vx y vy
+		       vai = (af - ai) / (tf - ti), // definidos vagamente porque para la trayectoria que queremos, el robot siempre girará a derecha; alternativamente, se puede hacer lo mismo que con vx y vy
 		       vxf, vyf, vaf;
 		// calculamos las velocidades finales usando las velocidades iniciales del próximo punto
 		if (i < wpoint_count - 2) {
 			vxf = (wpoints[i + 2][1] - xf) / (tf - ti);
 			vyf = (wpoints[i + 2][2] - yf) / (tf - ti);
-			vaf = 0.0001;
+			vyf = (wpoints[i + 2][3] - af) / (tf - ti);
 		} else {
 			vxf = 0.; // últimos dos puntos, la velocidad final será quedarse quieto
 			vyf = 0.;
@@ -109,22 +109,16 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
 		       a1 = vxi,
 		       a2 = (3/(dt*dt))*(xf - xi) - (2/dt)*vxi - vxf/dt,
 		       a3 = (-2/(dt*dt*dt))*(xf - xi) + (vxf - vxi)/(dt*dt);
-		       //a2 = (3/(tf*tf))*(xf - xi) - (2/tf)*vxi - vxf/tf,
-		       //a3 = (-2/(tf*tf*tf))*(xf - xi) + (vxf - vxi)/(tf*tf);
 		// idem para y(t)
 		double b0 = yi,
 		       b1 = vyi,
 		       b2 = (3/(dt*dt))*(yf - yi) - (2/dt)*vyi - vyf/dt,
 		       b3 = (-2/(dt*dt*dt))*(yf - yi) + (vyf - vyi)/(dt*dt);
-		       //b2 = (3/(tf*tf))*(yf - yi) - (2/tf)*vyi - vyf/tf,
-		       //b3 = (-2/(tf*tf*tf))*(yf - yi) + (vyf - vyi)/(tf*tf);
 		// idem para theta(t), aunque sería posible calcular la dirección opuesta al origen con atan2(y - y_world,x - x_world)
 		double c0 = ai,
 		       c1 = vai,
 		       c2 = (3/(dt*dt))*(af - ai) - (2/dt)*vai - vaf/dt,
 		       c3 = (-2/(dt*dt*dt))*(af - ai) + (vaf - vai)/(dt*dt);
-		       //c2 = (3/(tf*tf))*(thetaf - thetai) - (2/tf)*vai - vaf/tf,
-		       //c3 = (-2/(tf*tf*tf))*(thetaf - thetai) + (vaf - vai)/(tf*tf);
 		
 		// calculamos todos los puntos intermedios en la trayectoria, proveyendo posibles velocidades esperadas en cada punto
 		for (double t = ti; t <= tf; t += stepping) {
