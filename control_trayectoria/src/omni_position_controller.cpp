@@ -1,4 +1,4 @@
-#include "omni_position_controller.h"
+include "omni_position_controller.h"
 
 #define KX 0.6
 #define KY 0.6
@@ -34,36 +34,12 @@ bool OmniPositionController::getPursuitBasedGoal(double& gx, double& gy, double&
 	size_t wp_count = traj.points.size();
 	if (wp_count == 0)
 		return false;
+	
 	RCLCPP_INFO(this->get_logger(), "wp_count: %lu", wp_count);
-	//double best_dist = DBL_MAX;
-
-	// calculamos la distancia euclídea de la posición actual a cada punto en la trayectoria actual, arrancando
-	// desde el waypoint actual (uno anterior significaría retroceder)
-	// nos quedamos con el más cercano, que esté a un mínimo de distancia de lookahead
-	/*for (size_t i = current_wp_; i < wp_count - 1; i++)
-	{
-		double px = traj.points[i].transform.translation.x;
-		double py = traj.points[i].transform.translation.y;
-
-		double d =
-			hypot(px - x_, py - y_);
-		if (d < best_dist)
-		{
-			best_dist = d;
-			current_wp_ = i;
-		}
-
-		if (d < best_dist && d >= LOOKAHEAD)
-		{
-			best_dist = d;
-			current_wp_ = i;
-			break;
-		}
-
-	}
-*/
-	ga = tf2::getYaw(traj.points[current_wp_].transform.rotation);
-	if (fabs(angles::normalize_angle(ga - theta_)) < TOL) {
+	
+	double ca = tf2::getYaw(traj.points[current_wp_].transform.rotation);
+	// validamos que ya estamos apuntando a donde se espera antes de buscar el próximo waypoint en el plano x,y
+	if (fabs(angles::normalize_angle(ca - theta_)) < TOL) {
 		for (size_t i = current_wp_; i < wp_count; i++)
 		{
 			double px = traj.points[i].transform.translation.x;
@@ -81,12 +57,11 @@ bool OmniPositionController::getPursuitBasedGoal(double& gx, double& gy, double&
 
 	gx = traj.points[current_wp_].transform.translation.x;
 	gy = traj.points[current_wp_].transform.translation.y;
-
 	ga = tf2::getYaw(traj.points[current_wp_].transform.rotation);
+	
 	double dist_angular = fabs(angles::normalize_angle(ga - theta_));
 	double dist_linear = hypot(gx - x_, gy - y_);
 
-	//return true;
 	return dist_linear >= TOL || dist_angular >= TOL;
 }
 
