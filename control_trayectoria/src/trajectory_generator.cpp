@@ -72,7 +72,9 @@ int main(int argc, char** argv)
 void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& wpoints, robmovil_msgs::msg::Trajectory& trajectory_msg, nav_msgs::msg::Path& path_msg)
 {
 	int wpoint_count = wpoints.size();
-
+	if (wpoint_count == 0)
+		return;
+	
 	for (int i = 0; i < wpoint_count - 1; i++) {
 		double ti = wpoints[i][0],
 		       tf = wpoints[i + 1][0],
@@ -83,21 +85,23 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
 		double xf = wpoints[i + 1][1],
 		       yf = wpoints[i + 1][2],
 		       af = wpoints[i + 1][3];
-		/*
+
 		// si hay un waypoint mal puesto (tiempo de llegada menor o igual al punto siguiente), cortamos la generación de la trayectoria; hace falta comunicar al usuario que hay un error
 		if ((tf - ti) <= 0)
 			break;
-		*/
+
+		double dangular = angles::normalize(af - ai); // normalizamos la distancia entre ángulos, así se mantiene el rango en [-pi,pi]
 		// parámetros de curvatura: velocidades esperadas, calculadas de la forma más simple posible.
 		double vxi = (xf - xi) / (tf - ti),
 		       vyi = (yf - yi) / (tf - ti),
-		       vai = (af - ai) / (tf - ti), // definidos vagamente porque para la trayectoria que queremos, el robot siempre girará a derecha; alternativamente, se puede hacer lo mismo que con vx y vy
+		       vai = (dangular) / (tf - ti), // definidos vagamente porque para la trayectoria que queremos, el robot siempre girará a derecha; alternativamente, se puede hacer lo mismo que con vx y vy
 		       vxf, vyf, vaf;
 		// calculamos las velocidades finales usando las velocidades iniciales del próximo punto
 		if (i < wpoint_count - 2) {
-			vxf = (wpoints[i + 2][1] - xf) / (tf - ti);
-			vyf = (wpoints[i + 2][2] - yf) / (tf - ti);
-			vyf = (wpoints[i + 2][3] - af) / (tf - ti);
+			double t2f = wpoints[i + 2][0];
+			vxf = (wpoints[i + 2][1] - xf) / (t2f - tf);
+			vyf = (wpoints[i + 2][2] - yf) / (t2f - tf);
+			vaf = (wpoints[i + 2][3] - af) / (t2f - tf);
 		} else {
 			vxf = 0.; // últimos dos puntos, la velocidad final será quedarse quieto
 			vyf = 0.;
@@ -108,31 +112,31 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
 		double a0 = xi,
 		       a1 = vxi,
 		       a2 = (3/(dt*dt))*(xf - xi) - (2/dt)*vxi - vxf/dt,
-		       a3 = (-2/(dt*dt*dt))*(xf - xi) + (vxf - vxi)/(dt*dt);
+		       a3 = (-2/(dt*dt*dt))*(xf - xi) + (vxf + vxi)/(dt*dt);
 		// idem para y(t)
 		double b0 = yi,
 		       b1 = vyi,
 		       b2 = (3/(dt*dt))*(yf - yi) - (2/dt)*vyi - vyf/dt,
-		       b3 = (-2/(dt*dt*dt))*(yf - yi) + (vyf - vyi)/(dt*dt);
+		       b3 = (-2/(dt*dt*dt))*(yf - yi) + (vyf + vyi)/(dt*dt);
 		// idem para theta(t), aunque sería posible calcular la dirección opuesta al origen con atan2(y - y_world,x - x_world)
 		double c0 = ai,
 		       c1 = vai,
-		       c2 = (3/(dt*dt))*(af - ai) - (2/dt)*vai - vaf/dt,
-		       c3 = (-2/(dt*dt*dt))*(af - ai) + (vaf - vai)/(dt*dt);
+		       c2 = (3/(dt*dt))*(dangular) - (2/dt)*vai - vaf/dt,
+		       c3 = (-2/(dt*dt*dt))*(dangular) + (vaf + vai)/(dt*dt);
 		
 		// calculamos todos los puntos intermedios en la trayectoria, proveyendo posibles velocidades esperadas en cada punto
-		for (double t = ti; t <= tf; t += stepping) {
+		for (double t = ti; t < tf; t += stepping) {
 			double t_offset = t - ti;
 			// posiciones esperadas
-			double x = a0 + a1 * (t_offset / dt) + a2 * ((t_offset * t_offset) / (dt * dt)) + a3 * ((t_offset * t_offset * t_offset) / (dt * dt * dt)),
-			       y = b0 + b1 * (t_offset / dt) + b2 * ((t_offset * t_offset) / (dt * dt)) + b3 * ((t_offset * t_offset * t_offset) / (dt * dt * dt)),
-			       a = c0 + c1 * (t_offset / dt) + c2 * ((t_offset * t_offset) / (dt * dt)) + c3 * ((t_offset * t_offset * t_offset) / (dt * dt * dt));
+			double x = a0 + a1 * t_offset + a2 * (t_offset * t_offset) + a3 * (t_offset * t_offset * t_offset),
+			       y = b0 + b1 * t_offset + b2 * (t_offset * t_offset) + b3 * (t_offset * t_offset * t_offset),
+			       a = c0 + c1 * t_offset + c2 * (t_offset * t_offset) + c3 * (t_offset * t_offset * t_offset);
 			
 			// velocidades esperadas/derivadas primeras
 			// sería útil incluir estos valores al calcular los comandos de velocidades en la función de control en omni_position_controller.cpp
-			double vx = a1 / dt + 2. * a2 * (t_offset / (dt * dt)) + 3. * a3 * ((t_offset * t_offset) / (dt * dt * dt)),
-			       vy = b1 / dt + 2. * b2 * (t_offset / (dt * dt)) + 3. * b3 * ((t_offset * t_offset) / (dt * dt * dt)),
-			       va = c1 / dt + 2. * c2 * (t_offset / (dt * dt)) + 3. * c3 * ((t_offset * t_offset) / (dt * dt * dt));
+			double vx = a1 + 2. * a2 * t_offset + 3. * a3 * (t_offset * t_offset),
+			       vy = b1 + 2. * b2 * t_offset + 3. * b3 * (t_offset * t_offset),
+			       va = c1 + 2. * c2 * t_offset + 3. * c3 * (t_offset * t_offset);
 			
 			// se crean los waypoints de la trayectoria
 			robmovil_msgs::msg::TrajectoryPoint point_msg;
@@ -163,4 +167,32 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
 			path_msg.poses.push_back(stamped_pose_msg);  
 		}
 	}
+	// manejo del último waypoint de la trayectoria
+	std::vector<double> last_wpoint = wpoints[wpoint_count];
+	robmovil_msgs::msg::TrajectoryPoint point_msg;
+	point_msg.time_from_start = rclcpp::Duration::from_seconds(last_wpoint[0];
+	
+	point_msg.transform.translation.x = last_wpoint[1];
+	point_msg.transform.translation.y = last_wpoint[2];
+	tf2::Quaternion q;
+	q.setRPY(0, 0, last_wpoint[3]);
+	point_msg.transform.rotation = tf2::toMsg(q);
+
+	point_msg.velocity.linear.x  = 0;
+	point_msg.velocity.linear.y  = 0;
+	point_msg.velocity.angular.z = 0;
+
+	trajectory_msg.points.push_back( point_msg );
+
+	// construcción de una lista de poses, para visualizarlo en RViz2
+	geometry_msgs::msg::PoseStamped stamped_pose_msg;
+		  
+	stamped_pose_msg.header.stamp = path_msg.header.stamp;
+	stamped_pose_msg.header.frame_id = path_msg.header.frame_id;
+
+	stamped_pose_msg.pose.position.x = last_wpoint[1];
+	stamped_pose_msg.pose.position.y = last_wpoint[2];
+	stamped_pose_msg.pose.orientation = tf2::toMsg(q);
+
+	path_msg.poses.push_back(stamped_pose_msg);  
 }
