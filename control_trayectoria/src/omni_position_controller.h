@@ -38,8 +38,7 @@ private:
 	{
 		geometry_msgs::msg::PoseStamped goal;
 
-		//goal.header.frame_id = "odom";
-		goal.header.frame_id = "map";
+		goal.header.frame_id = "odom";
 		goal.header.stamp = t;
 		goal.pose.position.x = goal_x;
 		goal.pose.position.y = goal_y;
