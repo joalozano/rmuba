@@ -23,16 +23,21 @@ bool FeedForwardController::control(const rclcpp::Time& t, double& v, double& w)
 
   RCLCPP_INFO(this->get_logger(), "processing index: %zu", next_point_idx);
 
+  const auto& traj = getTrajectory();
   /* se obtienen los puntos de la trayectoria mas proximos en tiempo (el punto anteriormente transitado y el proximo a alcanzar) */
-  const robmovil_msgs::msg::TrajectoryPoint& prev_point = getTrajectory().points[ next_point_idx-1 ];
-  const robmovil_msgs::msg::TrajectoryPoint& next_point = getTrajectory().points[ next_point_idx ];
+  const robmovil_msgs::msg::TrajectoryPoint& prev_point;
+  if (next_point_idx == 0)
+	  prev_point = traj.points[ next_point_idx ];
+  else
+	  prev_point = traj.points[ next_point_idx-1 ];
+  const robmovil_msgs::msg::TrajectoryPoint& next_point = traj.points[ next_point_idx ];
 
   /* tiempos requeridos para cada uno de los puntos (se debe alcanzar el siguiente punto en el tiempo t1) */
   const rclcpp::Time& t0 = getInitialTime() + prev_point.time_from_start;
   const rclcpp::Time& t1 = getInitialTime() + next_point.time_from_start;
 
-  assert(t0 <= t);
-  assert(t < t1);
+  if (t < t0 || t >= t1 || t0 == t1)
+	  return true; // un punto fue imposible de alcanzar, seguimos con la trayectoria
 
   /* velocidades lineales en X notificadas por la trayectoria en ambos puntos. */
   double vx0 = prev_point.velocity.linear.x;
@@ -49,7 +54,7 @@ bool FeedForwardController::control(const rclcpp::Time& t, double& v, double& w)
   RCLCPP_INFO(this->get_logger(), "inter: t0=%ld t1=%ld vx0=%.3f vx1=%.3f va0=%.3f va1=%.3f t=%ld",
             t0.nanoseconds(), t1.nanoseconds(), vx0, vx1, va0, va1, t.nanoseconds());
 
-  RCLCPP_INFO(this->get_logger(), "trajectory size: %zu", getTrajectory().points.size());
+  RCLCPP_INFO(this->get_logger(), "trajectory size: %zu", traj.points.size());
 
   /* realizar una interpolacion entre las velocidades requeridas */
   double vx = lineal_interp(t0, t1, vx0, vx1, t); // calculo de la velocidad lineal en X

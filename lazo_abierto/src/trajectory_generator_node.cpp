@@ -9,6 +9,8 @@
 
 #include <vector>
 
+constexpr double k1 = 0.7, k2 = 0.3;
+
 // Forward declarations
 void build_sin_trajectory(double, double, double, double, robmovil_msgs::msg::Trajectory&, nav_msgs::msg::Path&);
 void build_spline_trajectory(double, std::vector<std::vector<double>>&, robmovil_msgs::msg::Trajectory&, nav_msgs::msg::Path&);
@@ -175,6 +177,9 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
     double final_time = wpoints [n_point+1][0];
     double delta_time = final_time - initial_time;
     
+	if (delta_time <= 0)
+		continue;
+
     double xa = wpoints [n_point][1];
     double ya = wpoints [n_point][2];
     double thetaa = wpoints [n_point][3];
@@ -182,13 +187,9 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
     double yb = wpoints [n_point + 1][2];
     double thetab = wpoints [n_point + 1][3];
     
-    /*std::cout << "xa " << xa << " ya " << ya << " thetaa " << thetaa  << std::endl;
-    std::cout << "xb " << xb << " yb " << yb << " thetab " << thetab  << std::endl;
-    std::cout << "tin " << initial_time << " tfin " << final_time << std::endl;
-*/
     // curvature parameters
-    double n1 = 0.00001;
-    double n2 = 1.8;
+    double n1 = k1 * hypot(xb - xy, yb - ya);
+    double n2 = k2 * (n1 / k1);
     
     // polynomial parameters
 
@@ -202,29 +203,18 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
     double b2 = 3*(yb - ya) - (2*b1 + n2*sin(thetab)); // 3·(yf - yi) - (2·b1 + vf·sin(thf))
     double b3 = -b2 + (yb - ya) + b1; // -b2 + (yf - yi) + b1
     
-    //std::cout << "a0 " << a0 << " a1 " << a1 << " a2 " << a2 << " a3 " << a3 << std::endl;
-    //std::cout << "b0 " << b0 << " b1 " << b1 << " b2 " << b2 << " b3 " << b3 << std::endl;
-
-    for (double t = initial_time; t <= final_time; t = t + stepping)
+    for (double t = initial_time; t < final_time; t = t + stepping)
     {
       //
       double t_offset = t-initial_time;
-      std::cout << "total_time " << delta_time << std::endl;
-      std::cout << "t " << t << std::endl;
       // X se extiende lo suficiente para dar varias vueltas en el tiempo determinado
       double x = a0 + a1 * t_offset / delta_time + a2 * t_offset * t_offset / (delta_time * delta_time) + a3 * t_offset * t_offset * t_offset / (delta_time * delta_time * delta_time);
       double y = b0 + b1 * t_offset / delta_time + b2 * t_offset * t_offset / (delta_time * delta_time) + b3 * t_offset * t_offset * t_offset / (delta_time * delta_time * delta_time);
 
-      std::cout << "x " << x << std::endl; 
-      //std::cout << "y " << y << std::endl; 
-      
       // derivadas primeras
       double vx = a1 / delta_time + 2. * a2 * t_offset / (delta_time * delta_time) + 3. * a3 * t_offset * t_offset / (delta_time * delta_time * delta_time);
       double vy = b1 / delta_time + 2. * b2 * t_offset / (delta_time * delta_time) + 3. * b3 * t_offset * t_offset / (delta_time * delta_time * delta_time);
 
-      std::cout << "vx " << vx << std::endl; 
-      //std::cout << "vy " << vy << std::endl; 
-      
       // derivadas segundas
       double vvx = 2. * a2 / (delta_time * delta_time) + 6. * a3 * t_offset / (delta_time * delta_time * delta_time);
       double vvy = 2. * b2 / (delta_time * delta_time) + 6. * b3 * t_offset / (delta_time * delta_time * delta_time);
@@ -250,11 +240,6 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
       point_msg.velocity.linear.y = vy;
       point_msg.velocity.linear.z = 0;
       
-      //std::cout << "vx" << vx << std::endl; 
-      //std::cout << "vy" << vy << std::endl; 
-      //std::cout << "step" << stepping << std::endl; 
-      //std::cout << "total_time" << total_time << std::endl; 
-        
       point_msg.velocity.angular.x = 0;
       point_msg.velocity.angular.y = 0;
       point_msg.velocity.angular.z = va;

@@ -22,14 +22,17 @@ void TrajectoryFollower::handleNewTrajectory(const robmovil_msgs::msg::Trajector
   RCLCPP_INFO(this->get_logger(), "trajectory size: %zu", trajectory_msg.points.size());
 
   current_trajectory_ = trajectory_msg;
+  if (timer_)
+	  timer_->cancel();
 
-  timer_ = this->create_wall_timer(std::chrono::milliseconds(10), std::bind(&TrajectoryFollower::timerCallback, this));
+  timer_ = rclcpp::create_timer(this, this->get_clock(), std::chrono::milliseconds(10), std::bind(&TrajectoryFollower::timerCallback, this));
+  //timer_ = this->create_wall_timer(std::chrono::milliseconds(10), std::bind(&TrajectoryFollower::timerCallback, this));
 }
 
 void TrajectoryFollower::timerCallback()
 {
   rclcpp::Time t = this->now();
-  RCLCPP_INFO(this->get_logger(), "t: %.9f", t.seconds());
+  RCLCPP_INFO_THROTTLE(this->get_logger(), t.seconds(), *this->get_clock(), 1000, "t: %.9f");
 
   // Aplicar la ley de control
 

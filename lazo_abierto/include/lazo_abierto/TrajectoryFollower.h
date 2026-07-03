@@ -8,7 +8,7 @@ class TrajectoryFollower : public rclcpp::Node
 
     TrajectoryFollower();
 
-    void stop_timer() { timer_->cancel(); }
+    void stop_timer() { if (timer_) timer_->cancel(); }
 
   protected:
 
