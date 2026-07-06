@@ -7,11 +7,11 @@
 #include <angles/angles.h> // para tener normalize_angle
 
 // matrices definidas en las ecuaciones 19 y 21 del paper
-double T_for[WHEEL_COUNT][3] = {{1, -1, -L},
+double T_inv[WHEEL_COUNT][3] = {{1, -1, -L},
 		     {1, 1, L},
 		     {1, 1, -L},
 		     {1, -1, L}};
-double T_inv[3][WHEEL_COUNT] = {{1, 1, 1, 1}, 
+double T_for[3][WHEEL_COUNT] = {{1, 1, 1, 1}, 
 		     {-1, 1, 1, -1},
 		     {-1, 1, -1, 1}};
 
@@ -54,7 +54,7 @@ void OmniOdometry::on_velocity_cmd(const geometry_msgs::msg::Twist::SharedPtr tw
 	// T_for es la matriz de transformación para cinemática directa/forward
 	std_msgs::msg::Float64 msg_salida;
 	for (int i = 0; i < WHEEL_COUNT; i++) {
-		msg_salida.data = (vx * T_for[i][0] + vy * T_for[i][1] + w * T_for[i][2]);
+		msg_salida.data = (vx * T_inv[i][0] + vy * T_inv[i][1] + w * T_inv[i][2]);
 		msg_salida.data /= WHEEL_RADIUS;
 
 		pub_vel_[i]->publish(msg_salida);
@@ -88,9 +88,9 @@ void OmniOdometry::on_encoder_ticks(const robmovil_msgs::msg::MultiEncoderTicks:
 		wheel_angular_vel = (rads_per_tick * (encoder->ticks[i] - last_ticks_[i])) / delta_t;
 		// calculamos las distintas velocidades del robot usando la matriz de
 		// transformación de cinemática inversa definida en la ecuación 21
-		vx += wheel_angular_vel * T_inv[0][i];
-		vy += wheel_angular_vel * T_inv[1][i];
-		w  += wheel_angular_vel * T_inv[2][i];
+		vx += wheel_angular_vel * T_for[0][i];
+		vy += wheel_angular_vel * T_for[1][i];
+		w  += wheel_angular_vel * T_for[2][i];
 	}
 	// vx = (radio/4.0) * T * vector_w, y así para vy y w
 	vx *= (WHEEL_RADIUS / 4.0);
