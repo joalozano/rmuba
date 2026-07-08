@@ -56,7 +56,7 @@ add_executable(trajectory_generator src/trajectory_generator.cpp)
 
 ament_target_dependencies(trajectory_controller rclcpp geometry_msgs robmovil_msgs nav_msgs tf2 tf2_geometry_msgs)
 #ament_target_dependencies(trajectory_follower rclcpp geometry_msgs robmovil_msgs nav_msgs tf2 tf2_geometry_msgs)
-ament_target_dependencies(trajectory_generator rclcpp geometry_msgs robmovil_msgs nav_msgs tf2 tf2_geometry_msgs)
+ament_target_dependencies(trajectory_generator rclcpp geometry_msgs robmovil_msgs nav_msgs tf2 tf2_geometry_msgs angles)
 ament_target_dependencies(trajectory_follower_cl rclcpp ament_cmake geometry_msgs robmovil_msgs nav_msgs tf2 tf2_ros tf2_geometry_msgs angles)
 ament_target_dependencies(logger rclcpp ament_cmake geometry_msgs robmovil_msgs nav_msgs tf2 tf2_ros tf2_geometry_msgs angles)
 

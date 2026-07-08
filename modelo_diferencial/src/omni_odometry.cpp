@@ -7,11 +7,11 @@
 #include <angles/angles.h> // para tener normalize_angle
 
 // matrices definidas en las ecuaciones 19 y 21 del paper
-double T_inv[WHEEL_COUNT][3] = {{1, -1, -L},
+constexpr double T_inv[WHEEL_COUNT][3] = {{1, -1, -L},
 		     {1, 1, L},
 		     {1, 1, -L},
 		     {1, -1, L}};
-double T_for[3][WHEEL_COUNT] = {{1, 1, 1, 1}, 
+constexpr double T_for[3][WHEEL_COUNT] = {{1, 1, 1, 1}, 
 		     {-1, 1, 1, -1},
 		     {-1, 1, -1, 1}};
 
@@ -80,12 +80,11 @@ void OmniOdometry::on_encoder_ticks(const robmovil_msgs::msg::MultiEncoderTicks:
 	rclcpp::Time current_time(encoder->header.stamp);
 
 	double delta_t = (current_time - last_ticks_time).seconds(),
-		   vx = 0, vy = 0, w = 0,
-	       wheel_angular_vel;
+		   vx = 0, vy = 0, w = 0;
 
 	for (int i = 0; i < WHEEL_COUNT; i++) {
 		// convertimos la diferencia de ticks de encoder a radianes y dividimos por el tiempo transcurrido, para obtener la velocidad angular de la rueda
-		wheel_angular_vel = (rads_per_tick * (encoder->ticks[i] - last_ticks_[i])) / delta_t;
+		double wheel_angular_vel = (rads_per_tick * (encoder->ticks[i] - last_ticks_[i])) / delta_t;
 		// calculamos las distintas velocidades del robot usando la matriz de
 		// transformación de cinemática inversa definida en la ecuación 21
 		vx += wheel_angular_vel * T_for[0][i];

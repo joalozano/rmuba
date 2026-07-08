@@ -1,12 +1,13 @@
-include "omni_position_controller.h"
+#include "omni_position_controller.h"
 
-#define KX 0.6
-#define KY 0.6
-#define KTH 0.6
+#define KX 1.2
+#define KY 1.2
+#define KTH 1.1
 
 #define LOOKAHEAD 0.3
 
 #define TOL 0.05
+#define ATOL 0.1
 
 
 OmniPositionController::OmniPositionController() :
@@ -39,7 +40,7 @@ bool OmniPositionController::getPursuitBasedGoal(double& gx, double& gy, double&
 	
 	double ca = tf2::getYaw(traj.points[current_wp_].transform.rotation);
 	// validamos que ya estamos apuntando a donde se espera antes de buscar el próximo waypoint en el plano x,y
-	if (fabs(angles::normalize_angle(ca - theta_)) < TOL) {
+	if (fabs(angles::normalize_angle(ca - theta_)) < ATOL) {
 		for (size_t i = current_wp_; i < wp_count; i++)
 		{
 			double px = traj.points[i].transform.translation.x;
@@ -62,7 +63,7 @@ bool OmniPositionController::getPursuitBasedGoal(double& gx, double& gy, double&
 	double dist_angular = fabs(angles::normalize_angle(ga - theta_));
 	double dist_linear = hypot(gx - x_, gy - y_);
 
-	return dist_linear >= TOL || dist_angular >= TOL;
+	return dist_linear >= TOL || dist_angular >= ATOL;
 }
 
 bool OmniPositionController::control(const rclcpp::Time& t, double& vx, double& vy, double& w)

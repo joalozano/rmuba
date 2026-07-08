@@ -9,10 +9,11 @@
 
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <angles/angles.h>
 
 
 void build_spline_trajectory(double, std::vector<std::vector<double>>&, robmovil_msgs::msg::Trajectory&, nav_msgs::msg::Path&);
-inline void compute_waypoint_velocities(std::vector<std::vector<double>>& wpoints, wpoint_count);
+inline void compute_waypoint_velocities(std::vector<std::vector<double>>& wpoints, int wpoint_count);
 
 int main(int argc, char** argv)
 {
@@ -76,7 +77,9 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
 	if (wpoint_count <= 1)
 		return;
 	
-	compute_waypoint_velocities(wpoints, wpoint_count);
+	// parámetros de curvatura: velocidades esperadas en el punto actual y el siguiente
+	constexpr double n0 = 0.2,
+			  		 n1 = 0.04;
 
 	for (int i = 0; i < wpoint_count - 1; i++) {
 		double ti = wpoints[i][0],
@@ -93,31 +96,24 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
 		double xf = wpoints[i + 1][1],
 		       yf = wpoints[i + 1][2],
 		       af = wpoints[i + 1][3];
-		double dangular = angles::normalize(af - ai); // normalizamos la distancia entre ángulos, así se mantiene el rango en [-pi,pi]
+		double dangular = angles::normalize_angle(af - ai); // normalizamos la distancia entre ángulos, así se mantiene el rango en [-pi,pi]
 
-		// parámetros de curvatura: velocidades esperadas en el punto actual y el siguiente
-		double vxi = wpoints[i][4],
-		       vyi = wpoints[i][5],
-		       vai = wpoints[i][6];
-		double vxf = wpoints[i + 1][4],
-		       vyf = wpoints[i + 1][5],
-		       vaf = wpoints[i + 1][6];
 
 		// coeficientes para calcular x(t)
 		double a0 = xi,
-		       a1 = vxi,
-		       a2 = (3/(dt*dt))*(xf - xi) - (2/dt)*vxi - vxf/dt,
-		       a3 = (-2/(dt*dt*dt))*(xf - xi) + (vxf + vxi)/(dt*dt);
+		       a1 = n0,
+		       a2 = (3/(dt*dt))*(xf - xi) - (2/dt)*n0 - n1/dt,
+		       a3 = (-2/(dt*dt*dt))*(xf - xi) + (n1 + n0)/(dt*dt);
 		// idem para y(t)
 		double b0 = yi,
-		       b1 = vyi,
-		       b2 = (3/(dt*dt))*(yf - yi) - (2/dt)*vyi - vyf/dt,
-		       b3 = (-2/(dt*dt*dt))*(yf - yi) + (vyf + vyi)/(dt*dt);
+		       b1 = n0,
+		       b2 = (3/(dt*dt))*(yf - yi) - (2/dt)*n0 - n1/dt,
+		       b3 = (-2/(dt*dt*dt))*(yf - yi) + (n1 + n0)/(dt*dt);
 		// idem para theta(t)
 		double c0 = ai,
-		       c1 = vai,
-		       c2 = (3/(dt*dt))*(dangular) - (2/dt)*vai - vaf/dt,
-		       c3 = (-2/(dt*dt*dt))*(dangular) + (vaf + vai)/(dt*dt);
+		       c1 = n0,
+		       c2 = (3/(dt*dt))*(dangular) - (2/dt)*n0 - n1/dt,
+		       c3 = (-2/(dt*dt*dt))*(dangular) + (n1 + n0)/(dt*dt);
 		
 		// calculamos todos los puntos intermedios en la trayectoria, proveyendo posibles velocidades esperadas en cada punto
 		for (double t = ti; t < tf; t += stepping) {
@@ -162,20 +158,4 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
 			path_msg.poses.push_back(stamped_pose_msg);  
 		}
 	}
-}
-
-// calculamos las velocidades esperadas para cada punto de la forma más simple: vd = (d1 - d0) / (t1 - t0)
-inline void compute_waypoint_velocities(std::vector<std::vector<double>>& wpoints, int wpoint_count)
-{
-	for (int i = 0; i < wpoint_count - 1; i++) {
-		double dt = wpoints[i + 1][0] - wpoints[i][0];
-		if (dt > 0) {
-			for (int j = 0; j <= 2; j++)
-				wpoints[i].push_back((wpoints[i + 1][j] - wpoints[i][j]) / dt);
-			wpoints[i].push_back(angles::normalize(wpoints[i + 1][3] - wpoints[i][3]) / dt);
-		}
-	}
-	// para el punto final, deseamos que el robot frene
-	for (int j = 0; j <= 3; j++)
-		wpoints[wpoint_count - 1].push_back(0);
 }
