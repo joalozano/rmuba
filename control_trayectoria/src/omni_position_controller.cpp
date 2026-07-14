@@ -97,12 +97,9 @@ bool OmniPositionController::control(const rclcpp::Time& t, double& vx, double& 
 	w  = KTH * etheta_r;
 
 	// imprimimos las velocidades en un formato csv-friendly, con una espera de 100ms
-	/*RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 100,
-			"%.2f,%.2f,%.2f", vx, vy, w);*/
-
 	// idem con posiciones esperadas y actuales
-	/*RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 333,
-			"%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f", t.seconds(), gx, gy, ga, x_, y_, theta_);*/
+	RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 333,
+			"%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f", t.seconds(), gx, gy, ga, x_, y_, theta_,vx,vy,w);
 
 
 	return true;
