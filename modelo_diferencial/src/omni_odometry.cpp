@@ -28,6 +28,11 @@ OmniOdometry::OmniOdometry() : Node("nodeOdometry"), x_(0), y_(0), theta_(0), ti
 			"/robot/encoders", rclcpp::QoS(10),
 			std::bind(&OmniOdometry::on_encoder_ticks, this, std::placeholders::_1));
 
+	// un suscriptor a ground_truth para reportar los valores de posición reales. Lo usamos para debug y experimentar
+	/*gt_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+		"/robot/ground_truth", rclcpp::QoS(10),
+		std::bind(&OmniOdometry::gt_callback, this, std::placeholders::_1));*/
+
 	pub_vel_[0] = this->create_publisher<std_msgs::msg::Float64>(
 			"/robot/front_left_wheel/cmd_vel", rclcpp::QoS(10));
 	pub_vel_[1] = this->create_publisher<std_msgs::msg::Float64>(
@@ -50,6 +55,10 @@ void OmniOdometry::on_velocity_cmd(const geometry_msgs::msg::Twist::SharedPtr tw
 	       vy = twist->linear.y,
 	       w  = twist->angular.z;
 
+	// reportamos la consigna de velocidad
+	/*RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 333,
+    "com:%f,%f,%f,%f",
+    last_ticks_time.seconds(), vx, vy, w);*/
 	// publicamos cada velocidad para cada rueda
 	// T_for es la matriz de transformación para cinemática directa/forward
 	std_msgs::msg::Float64 msg_salida;
@@ -73,9 +82,10 @@ void OmniOdometry::on_encoder_ticks(const robmovil_msgs::msg::MultiEncoderTicks:
 		return;
 	}
 
-	RCLCPP_INFO(this->get_logger(),
+	// reportamos las lecturas de encoder para cada rueda
+	/*RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 100,
     "tck1=%d tck2=%d tck3=%d tck4=%d",
-    encoder->ticks[0], encoder->ticks[1], encoder->ticks[2], encoder->ticks[3]);
+    encoder->ticks[0], encoder->ticks[1], encoder->ticks[2], encoder->ticks[3]);*/
 	/* Utilizar este delta de tiempo entre momentos */
 	rclcpp::Time current_time(encoder->header.stamp);
 
@@ -147,10 +157,14 @@ void OmniOdometry::on_encoder_ticks(const robmovil_msgs::msg::MultiEncoderTicks:
 
 	tf_broadcaster_->sendTransform(t);
 
-	RCLCPP_INFO(this->get_logger(),
-    "x=%f y=%f theta=%f",
-    x_, y_, theta_);
-	RCLCPP_INFO(this->get_logger(),
-    "dt=%f vx=%f vy=%f w=%f",
-    delta_t, vx, vy, w);
+	// reportamos la velocidad derivada a partir de los encoders
+	/*RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 333,
+    "lec:%f,%f,%f,%f",
+    last_ticks_time.seconds(), vx, vy, w);*/
+}
+
+void OmniOdometry::gt_callback(const nav_msgs::msg::Odometry::SharedPtr gt) {
+	RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 333,
+    "%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f",
+    this->get_clock()->now().seconds(), gt->pose.pose.position.x, gt->pose.pose.position.y, tf2::getYaw(gt->pose.pose.orientation), x_, y_, theta_);
 }

@@ -78,8 +78,8 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
 		return;
 	
 	// parámetros de curvatura: velocidades esperadas en el punto actual y el siguiente
-	constexpr double n0 = 0.2,
-			  		 n1 = 0.04;
+	constexpr double n0 = 0.08,
+			  		 n1 = 0.03;
 
 	for (int i = 0; i < wpoint_count - 1; i++) {
 		double ti = wpoints[i][0],

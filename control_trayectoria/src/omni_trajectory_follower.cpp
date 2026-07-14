@@ -16,7 +16,7 @@ OmniTrajectoryFollower::OmniTrajectoryFollower()
 void OmniTrajectoryFollower::handleNewTrajectory(
 	const robmovil_msgs::msg::Trajectory& trajectory_msg)
 {
-	RCLCPP_INFO(this->get_logger(), "New trajectory received");
+	//RCLCPP_INFO(this->get_logger(), "New trajectory received");
 
 	do { t0_ = this->now(); } while (t0_.seconds() == 0.0);
 
@@ -32,7 +32,7 @@ void OmniTrajectoryFollower::handleNewTrajectory(
 void OmniTrajectoryFollower::timerCallback()
 {
 	rclcpp::Time t = this->now();
-	RCLCPP_INFO(this->get_logger(), "t: %.9f", t.seconds());
+	//RCLCPP_INFO(this->get_logger(), "t: %.9f", t.seconds());
 
 	double vx, vy, w;
 	

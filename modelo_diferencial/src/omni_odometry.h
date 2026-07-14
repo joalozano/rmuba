@@ -4,6 +4,7 @@
 #include <geometry_msgs/msg/twist.hpp>
 #include <robmovil_msgs/msg/multi_encoder_ticks.hpp>
 #include <std_msgs/msg/float64.hpp>
+#include <tf2/utils.h>
 #include <nav_msgs/msg/odometry.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 
@@ -33,10 +34,13 @@ class OmniOdometry : public rclcpp::Node
 
 	void on_encoder_ticks(const robmovil_msgs::msg::MultiEncoderTicks::SharedPtr encoder);
 
+	void gt_callback(const nav_msgs::msg::Odometry::SharedPtr gt);
+
   private:
 
 	rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr twist_sub_;
 	rclcpp::Subscription<robmovil_msgs::msg::MultiEncoderTicks>::SharedPtr encoder_sub_;
+	rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr gt_sub_;
 
 	//rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr vel_pub_left_;
 	//rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr vel_pub_right_;

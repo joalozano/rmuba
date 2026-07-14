@@ -51,21 +51,18 @@ include_directories(
 add_library(trajectory_controller src/omni_trajectory_follower.cpp)
 
 add_executable(trajectory_follower_cl src/omni_position_controller_node.cpp src/omni_position_controller.cpp)
-add_executable(logger src/logger_node.cpp)
 add_executable(trajectory_generator src/trajectory_generator.cpp)
 
 ament_target_dependencies(trajectory_controller rclcpp geometry_msgs robmovil_msgs nav_msgs tf2 tf2_geometry_msgs)
 #ament_target_dependencies(trajectory_follower rclcpp geometry_msgs robmovil_msgs nav_msgs tf2 tf2_geometry_msgs)
 ament_target_dependencies(trajectory_generator rclcpp geometry_msgs robmovil_msgs nav_msgs tf2 tf2_geometry_msgs angles)
 ament_target_dependencies(trajectory_follower_cl rclcpp ament_cmake geometry_msgs robmovil_msgs nav_msgs tf2 tf2_ros tf2_geometry_msgs angles)
-ament_target_dependencies(logger rclcpp ament_cmake geometry_msgs robmovil_msgs nav_msgs tf2 tf2_ros tf2_geometry_msgs angles)
 
 ## Specify libraries to link a library or executable target against
 #target_link_libraries(trajectory_follower trajectory_controller ${catkin_LIBRARIES})
 #target_link_libraries(trajectory_generator ${catkin_LIBRARIES})
 
 target_link_libraries(trajectory_follower_cl trajectory_controller)
-target_link_libraries(logger trajectory_controller)
 
 target_include_directories(trajectory_controller PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -89,7 +86,6 @@ install(TARGETS
   #trajectory_controller
   trajectory_follower_cl
   trajectory_generator
-  logger
   #EXPORT export_trajectory_controller
   DESTINATION lib/${PROJECT_NAME}
 )

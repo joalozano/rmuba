@@ -1,13 +1,13 @@
 #include "omni_position_controller.h"
 
-#define KX 1.2
-#define KY 1.2
+#define KX 1.0
+#define KY 0.9
 #define KTH 1.1
 
 #define LOOKAHEAD 0.3
 
-#define TOL 0.05
-#define ATOL 0.1
+#define TOL 0.02
+#define ATOL 0.08
 
 
 OmniPositionController::OmniPositionController() :
@@ -36,7 +36,7 @@ bool OmniPositionController::getPursuitBasedGoal(double& gx, double& gy, double&
 	if (wp_count == 0)
 		return false;
 	
-	RCLCPP_INFO(this->get_logger(), "wp_count: %lu", wp_count);
+	//RCLCPP_INFO(this->get_logger(), "wp_count: %lu", wp_count);
 	
 	double ca = tf2::getYaw(traj.points[current_wp_].transform.rotation);
 	// validamos que ya estamos apuntando a donde se espera antes de buscar el próximo waypoint en el plano x,y
@@ -96,11 +96,13 @@ bool OmniPositionController::control(const rclcpp::Time& t, double& vx, double& 
 	}
 	w  = KTH * etheta_r;
 
-	RCLCPP_INFO(this->get_logger(), "atan2: %.2f, vx: %.2f, vy: %.2f, w: %.2f",
-						atan2(dy, dx), vx, vy, w);
+	// imprimimos las velocidades en un formato csv-friendly, con una espera de 100ms
+	/*RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 100,
+			"%.2f,%.2f,%.2f", vx, vy, w);*/
 
-	RCLCPP_INFO(this->get_logger(), "goal_x: %.2f, goal_y: %.2f, goal_a: %.2f, current_x: %.2f, current_y: %.2f, current_a: %.2f",
-						gx, gy, ga, x_, y_, theta_);
+	// idem con posiciones esperadas y actuales
+	/*RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 333,
+			"%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f", t.seconds(), gx, gy, ga, x_, y_, theta_);*/
 
 
 	return true;
