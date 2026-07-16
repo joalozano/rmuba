@@ -32,7 +32,8 @@ void TrajectoryFollower::handleNewTrajectory(const robmovil_msgs::msg::Trajector
 void TrajectoryFollower::timerCallback()
 {
   rclcpp::Time t = this->now();
-  RCLCPP_INFO_THROTTLE(this->get_logger(), t.seconds(), *this->get_clock(), 1000, "t: %.9f");
+  RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+		  "t: %.9f", t.seconds());
 
   // Aplicar la ley de control
 

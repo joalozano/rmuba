@@ -5,8 +5,8 @@
       <author>Assimp</author>
       <authoring_tool>Assimp Exporter</authoring_tool>
     </contributor>
-    <created>2025-10-15T13:58:30</created>
-    <modified>2025-10-15T13:58:30</modified>
+    <created>2026-07-16T19:56:28</created>
+    <modified>2026-07-16T19:56:28</modified>
     <unit name="meter" meter="1" />
     <up_axis>Y_UP</up_axis>
   </asset>
@@ -16,7 +16,7 @@
         <technique sid="standard">
           <phong>
             <emission>
-              <color sid="emission">0   0   0   4.3108145e-41</color>
+              <color sid="emission">0   0   0   4.5659909e-41</color>
             </emission>
             <ambient>
               <color sid="ambient">0.14705881   0.14705881   0.14705881   0</color>
@@ -25,7 +25,7 @@
               <color sid="diffuse">0.14705881   0.14705881   0.14705881   0</color>
             </diffuse>
             <specular>
-              <color sid="specular">0.25   0.25   0.25   1.3949645e+09</color>
+              <color sid="specular">0.25   0.25   0.25   -3.7601949e+21</color>
             </specular>
           </phong>
         </technique>
@@ -65,7 +65,7 @@
   </library_controllers>
   <library_visual_scenes>
     <visual_scene id="Scene" name="Scene">
-      <node id="Node_0x782b4f12f320"  name="Node_0x782b4f12f320" type="NODE">
+      <node id="Node_0x7f48e37e2130"  name="Node_0x7f48e37e2130" type="NODE">
         <matrix sid="matrix">1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
         <instance_geometry url="#meshId0">
           <bind_material>

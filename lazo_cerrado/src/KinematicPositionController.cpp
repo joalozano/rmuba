@@ -94,7 +94,7 @@ bool KinematicPositionController::control(const rclcpp::Time& t, double& v, doub
 		w = K_CORRECCION * theta;
 	} else {
 		v = K_RHO * rho;
-			w = K_ALPHA * alpha + K_BETA * beta;
+		w = K_ALPHA * alpha + K_BETA * beta;
 	}
 
 
@@ -135,14 +135,14 @@ bool KinematicPositionController::getPursuitBasedGoal(const rclcpp::Time& t, dou
 	 * Se recomienda encontrar el waypoint de la trayectoria más cercano al robot en términos de x,y
 	 * y luego buscar el primer waypoint que se encuentre a una distancia predefinida de lookahead en x,y */
 	
-#define LOOK 0.8
+#define LOOK 0.4
 	/* NOTA: De esta manera les es posible recorrer la trayectoria requerida */	
-	double min_dist = DBL_MAX, d_wp;
+	double min_dist = obtener_dist_conwp(trajectory.points[prev_wp], c_x, c_y);
 	unsigned int wp_count = trajectory.points.size();
-	for(unsigned int i = prev_wp; i < wp_count - 1; i++)
+	for(unsigned int i = prev_wp; i < std::min(prev_wp + 50,(int)wp_count - 1); i++)
 	{
 		// Recorren cada waypoint definido
-		d_wp = obtener_dist_conwp(trajectory.points[i], c_x, c_y);
+		double d_wp = obtener_dist_conwp(trajectory.points[i], c_x, c_y);
 		if (min_dist > d_wp) {
 			 prev_wp = i;
 			 min_dist = d_wp;
@@ -162,7 +162,7 @@ bool KinematicPositionController::getPursuitBasedGoal(const rclcpp::Time& t, dou
 	a = tf2::getYaw(trajectory.points[prev_wp].transform.rotation);
 	
 	/* retorna true si es posible definir un goal, false si se termino la trayectoria y no quedan goals. */
-	return min_dist >= R_TOL || prev_wp != (wp_count - 1);
+	return min_dist >= R_TOL;
 }
 
 bool KinematicPositionController::getTimeBasedGoal(const rclcpp::Time& t, double& x, double& y, double& a)

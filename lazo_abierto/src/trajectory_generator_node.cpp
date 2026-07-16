@@ -9,7 +9,7 @@
 
 #include <vector>
 
-constexpr double k1 = 0.7, k2 = 0.3;
+constexpr double k1 = 0.4, k2 = 0.1;
 
 // Forward declarations
 void build_sin_trajectory(double, double, double, double, robmovil_msgs::msg::Trajectory&, nav_msgs::msg::Path&);
@@ -188,7 +188,7 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
     double thetab = wpoints [n_point + 1][3];
     
     // curvature parameters
-    double n1 = k1 * hypot(xb - xy, yb - ya);
+    double n1 = k1 * hypot(xb - xa, yb - ya);
     double n2 = k2 * (n1 / k1);
     
     // polynomial parameters

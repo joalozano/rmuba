@@ -25,7 +25,7 @@ bool FeedForwardController::control(const rclcpp::Time& t, double& v, double& w)
 
   const auto& traj = getTrajectory();
   /* se obtienen los puntos de la trayectoria mas proximos en tiempo (el punto anteriormente transitado y el proximo a alcanzar) */
-  const robmovil_msgs::msg::TrajectoryPoint& prev_point;
+  robmovil_msgs::msg::TrajectoryPoint prev_point;
   if (next_point_idx == 0)
 	  prev_point = traj.points[ next_point_idx ];
   else
