@@ -2,8 +2,9 @@
 <package format="3">
   <name>robmovil_ekf</name>
   <version>0.0.0</version>
-  <description>The robmovil_ekf package</description>
-  <maintainer email="francisco.raverta@gmail.com">FranciscoRaverta</maintainer>
+  <description>EKF para mecanum sin IMU</description>
+  <maintainer email="fvanotti15@gmail.com">FrancoVanotti</maintainer>
+  <maintainer email="joaquin.lozano.trabajo@gmail.com">JoaquínLozano</maintainer>
   <license>BSD-3-Clause</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
@@ -11,9 +12,8 @@
 
   <build_depend>robmovil_msgs</build_depend>
   <build_depend>nav_msgs</build_depend>
-  <build_depend>imu_laser</build_depend>
   <build_depend>kfilter</build_depend>
-  <build_depend>imu_laser</build_depend>
+  <build_depend>landmark_detector</build_depend>
   
   <export>
     <build_type>ament_cmake</build_type>

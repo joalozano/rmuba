@@ -4,6 +4,7 @@
 
 #include <nav_msgs/msg/odometry.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
+#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 
 #include <tf2/utils.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -22,6 +23,7 @@ private:
 
 	rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr goal_pub_;
 	rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
+	rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_sub_;
 
 	int current_wp_ = 0;
 	double x_ = 0.0;
@@ -29,6 +31,7 @@ private:
 	double theta_ = 0.0;
 
 	void getCurrentPoseFromOdometry(const nav_msgs::msg::Odometry& odom);
+	void getCurrentPoseFromLocalizer(const geometry_msgs::msg::PoseWithCovarianceStamped& pose);
 
 	// Implementaremos únicamente pursuit-based trajectories para el TP
 	bool getPursuitBasedGoal(double& gx, double& gy, double& ga);

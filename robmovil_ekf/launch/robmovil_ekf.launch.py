@@ -16,7 +16,7 @@ def generate_launch_description():
         DeclareLaunchArgument('log_level', default_value='info'),
 
         Node(
-            package='imu_laser',
+            package='landmark_detector',
             executable='landmark_detector',
             name='landmark_detector',
             output='screen',
@@ -26,7 +26,7 @@ def generate_launch_description():
         ),
 
         Node(
-            package='imu_laser',
+            package='landmark_detector',
             executable='landmark_detector',
             name='landmark_detector_gt',
             output='screen',
@@ -40,7 +40,7 @@ def generate_launch_description():
         ),
 
         Node(
-            package='modelo_diferencial',
+            package='modelo_odometrico',
             executable='omni_odometry_node',
             name='omni_odometry',
             output='screen',
@@ -51,7 +51,7 @@ def generate_launch_description():
             package='tf2_ros',
             executable='static_transform_publisher',
             name='base_link_laser',
-            arguments=['0', '0', '0', '0', '0', '0', 'base_link', 'laser'],
+            arguments=['0', '0', '0', '0', '0', '0', 'base_link', 'front_laser'],
             parameters=[{"use_sim_time": True}]
         ),
 

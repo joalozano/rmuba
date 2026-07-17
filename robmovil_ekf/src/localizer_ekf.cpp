@@ -57,7 +57,7 @@ void robmovil_ekf::LocalizerEKF::set_delta_t(double delta)
  *  del landmark perteneciente al mapa con el que la nueva medicion debera compararse */
 bool robmovil_ekf::LocalizerEKF::set_measure(const Vector& new_measure_z)
 {
-  RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "New measure (polar): %d", new_measure_z);
+  //RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "New measure (polar): %d", new_measure_z);
 
   /* Convertir medicion actual a landmark, en representation cartesiana y en referencia al mundo
    * (lugar en el momento en que comenzo el sistema) */
@@ -96,7 +96,7 @@ void robmovil_ekf::LocalizerEKF::makeA(void)
   A(1,3) = -u(1)*delta_t*sin(x(3)) - u(2)*delta_t*cos(x(3));
   A(2,3) = u(1)*delta_t*cos(x(3)) - u(2)*delta_t*sin(x(3));
 
-  RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "A: %d", A);
+  //RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "A: %d", A);
 }
 
 
@@ -175,7 +175,7 @@ void robmovil_ekf::LocalizerEKF::makeH(void)
 
   }
 
-  RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "H: %d", H);
+  //RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "H: %d", H);
 }
 
 /** Jacobiano de H respecto de v **/
@@ -188,7 +188,7 @@ void robmovil_ekf::LocalizerEKF::makeBaseV(void)
   V(2,1) = 0;
   V(2,2) = 1;
   
-  RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "V: %d", V);
+  //RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "V: %d", V);
 }
 
 /** Covarianza de v **/
@@ -199,7 +199,7 @@ void robmovil_ekf::LocalizerEKF::makeBaseR()
   R(2,1) = 0;
   R(2,2) = 0.00007615435; // Var(phi) = (0.5 * pi / 180)^2 (desvio de 0.5 grados)
   
-  RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "R: %d", R);
+  //RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "R: %d", R);
 }
 
 /** Modelo de movimiento o proceso: x_t = f(x_t-1, u_t-1).
@@ -219,7 +219,7 @@ void robmovil_ekf::LocalizerEKF::makeProcess(void)
   x(3) = angles::normalize_angle(x_old(3) + u(3)*delta_t);
    
 
-  RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Process model: X_t-1: %d, X_t: %d, delta_t: %d", x_old, x, delta_t);
+  //RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Process model: X_t-1: %d, X_t: %d, delta_t: %d", x_old, x, delta_t);
 }
 
 /** Modelo de sensado: z_t = h(x_t).
@@ -230,7 +230,7 @@ void robmovil_ekf::LocalizerEKF::makeMeasure(void)
 {
   z = landmark2measure(correspondence_landmark);
   
-  RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Expected measure: %d", z);
+  //RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Expected measure: %d", z);
 }
 
 /** Recibe una medicion de landmark reciente con respecto al origen del mapa (lugar en que comenzo el sistema)
@@ -285,7 +285,7 @@ tf2::Vector3 robmovil_ekf::LocalizerEKF::measure2landmark(const LocalizerEKF::Ve
   /* Considerar la orientacion del robot 
    * y el angulo de la medicion con respecto al robot */
 
-  float absolute_angle = phi + robot_theta;
+  double absolute_angle = phi + robot_theta;
 
   tf2::Vector3 predicted_landmark;
   predicted_landmark.setX(rho * cos(absolute_angle));
@@ -326,7 +326,7 @@ robmovil_ekf::LocalizerEKF::Vector robmovil_ekf::LocalizerEKF::landmark2measure(
   LocalizerEKF::Vector measure(2);
   measure(1) = relative_landmark.length(); // Calculo del rho
 
-  relative_landmark.normalize();
+  //relative_landmark.normalize();
   measure(2) = angles::normalize_angle(atan2(relative_landmark.getY(), relative_landmark.getX())); // Calculo del phi
 
 

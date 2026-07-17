@@ -56,18 +56,3 @@ void OmniTrajectoryFollower::timerCallback()
 
 	cmd_pub_->publish(cmd);
 }
-
-bool OmniTrajectoryFollower::nextPointIndex(const rclcpp::Time& time, size_t& next_point_idx) const
-{
-	size_t idx = 0;
-
-	for (const auto& point : current_trajectory_.points) {
-		if (time < t0_ + point.time_from_start) {
-			next_point_idx = idx;
-			return true;
-		}
-		idx++;
-	}
-
-	return false;
-}

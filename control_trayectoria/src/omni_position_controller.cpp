@@ -16,9 +16,14 @@ OmniPositionController::OmniPositionController() :
 	rclcpp::QoS qos_profile(rclcpp::KeepLast(50));
 	qos_profile.reliable();
 	qos_profile.durability_volatile();
+	this->declare_parameter<bool>("use_ekf", false);
+	bool use_ekf = this->get_parameter("use_ekf").as_bool();
 
-	goal_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/goal_pose", rclcpp::QoS(10));
-	odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>("/robot/odometry", rclcpp::QoS(10), std::bind(&OmniPositionController::getCurrentPoseFromOdometry, this, std::placeholders::_1));
+	goal_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/goal_pose", 10);
+	if (use_ekf)
+		pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>("/pose", 10, std::bind(&OmniPositionController::getCurrentPoseFromLocalizer, this, std::placeholders::_1));
+	else
+		odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>("/robot/odometry", 10, std::bind(&OmniPositionController::getCurrentPoseFromOdometry, this, std::placeholders::_1));
 }
 
 void OmniPositionController::getCurrentPoseFromOdometry(const nav_msgs::msg::Odometry& odom)
@@ -27,6 +32,14 @@ void OmniPositionController::getCurrentPoseFromOdometry(const nav_msgs::msg::Odo
 	y_ = odom.pose.pose.position.y;
 
 	theta_ = tf2::getYaw(odom.pose.pose.orientation);
+}
+
+void OmniPositionController::getCurrentPoseFromLocalizer(const geometry_msgs::msg::PoseWithCovarianceStamped& pose)
+{
+	x_ = pose.pose.pose.position.x;
+	y_ = pose.pose.pose.position.y;
+
+	theta_ = tf2::getYaw(pose.pose.pose.orientation);
 }
 
 bool OmniPositionController::getPursuitBasedGoal(double& gx, double& gy, double& ga)

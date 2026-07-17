@@ -1,26 +1,49 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
+ekf=True
+
+def agregar_nodos_ekf():
+    if (ekf):
+        return [
+        Node(
+            package='landmark_detector',
+            executable='landmark_detector',
+            name='landmark_detector',
+            output='screen',
+            parameters=[{'publish_robot_frame': 'base_link_ekf'},
+                        {"use_sim_time": True}]
+        ),
+        Node(
+            package='robmovil_ekf',
+            executable='localizer',
+            name='localizer',
+            output='screen',
+            parameters=[{'only_prediction': False},
+                        {'min_landmark_size': 3},
+                        {"use_sim_time": True}],
+        )
+    ]
+    else:
+        return []
 
 def generate_launch_description():
-    return LaunchDescription([
-
+    return LaunchDescription(agregar_nodos_ekf() + [
         Node(
-            package="modelo_diferencial",
+            package="modelo_odometrico",
             executable="omni_odometry_node",
             name="omni_odometry",
             output="screen",
             parameters=[{'use_sim_time': True}]
         ),
-
         Node(
             package="control_trayectoria",
             executable="trajectory_follower_cl",
             name="trajectory_follower_cl",
             output="screen",
-            parameters=[{'use_sim_time': True}],
+            parameters=[{'use_sim_time': True},
+                        {'use_ekf': ekf}],
         ),
-
         Node(
             package="control_trayectoria",
             executable="trajectory_generator",

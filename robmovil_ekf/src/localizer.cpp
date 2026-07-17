@@ -23,7 +23,6 @@ robmovil_ekf::Localizer::Localizer() :
   this->get_parameter("min_landmark_size", min_landmark_size);
   
   landmark_sub = this->create_subscription<robmovil_msgs::msg::LandmarkArray>( "/landmarks", rclcpp::QoS(10), std::bind(&Localizer::on_landmark_array, this, std::placeholders::_1));
-  imu_sub = this->create_subscription<sensor_msgs::msg::Imu>( "/imu", rclcpp::QoS(10), std::bind(&Localizer::on_imu, this, std::placeholders::_1));
   odo_sub = this->create_subscription<nav_msgs::msg::Odometry>( "/robot/odometry", rclcpp::QoS(10), std::bind(&Localizer::on_odometry, this, std::placeholders::_1));
 
   pose_pub = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/pose", rclcpp::QoS(10));
@@ -94,7 +93,7 @@ void robmovil_ekf::Localizer::on_landmark_array(const robmovil_msgs::msg::Landma
     ekf.set_map(map);
     set_map = false;
     
-    return;
+    //return;
   }
   
   /* Se apaga el timer que predice periodicamente dado que
@@ -132,26 +131,25 @@ void robmovil_ekf::Localizer::on_landmark_array(const robmovil_msgs::msg::Landma
   prediction_timer->reset();
 }
 
-void robmovil_ekf::Localizer::on_imu(const sensor_msgs::msg::Imu::SharedPtr msg)
-{
-  u(2) = msg->angular_velocity.z;
-  RCLCPP_INFO(this->get_logger(), "Received angular velocity Z: %f", u(2));
-}
-
 void robmovil_ekf::Localizer::on_odometry(const nav_msgs::msg::Odometry::SharedPtr msg)
 {
   u(1) = msg->twist.twist.linear.x;
+  u(2) = msg->twist.twist.linear.y;
+  u(3) = msg->twist.twist.angular.z;
   RCLCPP_INFO(this->get_logger(), "Received linear velocity X: %f", u(1));
 }
 
 void robmovil_ekf::Localizer::advance_time(const rclcpp::Time& now)
 {
   double delta_t = (now - t).seconds();
+
+  if (delta_t < 0) {
+	  RCLCPP_ERROR_STREAM(this->get_logger(), "Negative delta_t! " << delta_t);
+	  return;
+  }
+
+  ekf.set_delta_t(delta_t);
   t = now;
-
-  if (delta_t < 0) RCLCPP_ERROR_STREAM(this->get_logger(), "Negative delta_t! " << delta_t);
-  else ekf.set_delta_t(delta_t);
-
   RCLCPP_INFO(this->get_logger(), "Time advanced by: %f", delta_t);
 }
 

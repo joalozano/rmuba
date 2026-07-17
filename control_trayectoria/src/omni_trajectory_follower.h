@@ -18,8 +18,6 @@ protected:
 
 	const robmovil_msgs::msg::Trajectory& getTrajectory() const { return current_trajectory_; }
 
-	bool nextPointIndex(const rclcpp::Time& time, size_t& next_point_idx) const;
-
 	void handleNewTrajectory(const robmovil_msgs::msg::Trajectory& trajectory_msg);
 	
 	virtual bool control(const rclcpp::Time& t, double& vx, double& vy, double& w) = 0;

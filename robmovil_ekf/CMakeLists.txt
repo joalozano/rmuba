@@ -19,7 +19,7 @@ find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(angles REQUIRED)
-find_package(imu_laser REQUIRED)
+find_package(landmark_detector REQUIRED)
 find_package(kfilter REQUIRED)
 
 ## System dependencies are found with CMake's conventions
@@ -57,7 +57,7 @@ find_package(kfilter REQUIRED)
 #catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES robmovil_ekf
-#   CATKIN_DEPENDS roscpp imu_laser
+#   CATKIN_DEPENDS roscpp landmark_detector
 #  DEPENDS system_lib
 #)
 
@@ -86,7 +86,7 @@ include_directories(
 
 ## Declare a C++ executable
 add_executable(localizer src/localizer_node.cpp src/localizer.cpp src/localizer_ekf.cpp)
-ament_target_dependencies(localizer rclcpp ament_cmake geometry_msgs robmovil_msgs nav_msgs tf2 tf2_ros tf2_geometry_msgs sensor_msgs angles imu_laser kfilter)
+ament_target_dependencies(localizer rclcpp ament_cmake geometry_msgs robmovil_msgs nav_msgs tf2 tf2_ros tf2_geometry_msgs sensor_msgs angles landmark_detector kfilter)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
