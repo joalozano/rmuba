@@ -149,7 +149,7 @@ bool KinematicPositionController::getPursuitBasedGoal(const rclcpp::Time& t, dou
 		}
 	}
 	for(unsigned int i = prev_wp; i < wp_count; i++) {
-		d_wp = obtener_dist_conwp(trajectory.points[i], c_x, c_y);
+		double d_wp = obtener_dist_conwp(trajectory.points[i], c_x, c_y);
 		if (d_wp >= LOOK) {
 			min_dist = d_wp;
 			prev_wp = i;
