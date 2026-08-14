@@ -7,6 +7,7 @@
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2/LinearMath/Transform.h>
+#include <geometry_msgs/msg/pose_array.hpp>
 
 #include "localizer_ekf.h"
 
@@ -18,15 +19,16 @@ namespace robmovil_ekf {
 
       void on_landmark_array(const robmovil_msgs::msg::LandmarkArray::SharedPtr msg);
       void on_odometry(const nav_msgs::msg::Odometry::SharedPtr msg);
+	  void on_posts(const geometry_msgs::msg::PoseArray::SharedPtr posts);
 
     private:
       LocalizerEKF ekf;
-      bool set_map;
       bool only_prediction;
       int min_landmark_size;
       
       rclcpp::Subscription<robmovil_msgs::msg::LandmarkArray>::SharedPtr landmark_sub;
       rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odo_sub;
+      rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr post_sub;
       rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_pub;
       std::string base_frame_, map_frame_, laser_frame_;
       

@@ -47,14 +47,6 @@ def generate_launch_description():
             parameters=[{"use_sim_time": True}]
         ),
 
-        Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            name='base_link_laser',
-            arguments=['0', '0', '0', '0', '0', '0', 'base_link', 'front_laser'],
-            parameters=[{"use_sim_time": True}]
-        ),
-
         # EKF node
         Node(
             package='robmovil_ekf',
@@ -62,7 +54,8 @@ def generate_launch_description():
             name='localizer',
             output='screen',
             parameters=[{'only_prediction': False},
-                        {'min_landmark_size': 2},
-                        {"use_sim_time": True}],
-        ),
+                        {'min_landmark_size': 1},
+                        {"ekf_frame": "odom"},
+                        {"use_sim_time": True}]
+        )
     ])

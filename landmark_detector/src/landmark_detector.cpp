@@ -28,7 +28,7 @@ robmovil_ekf::LandmarkDetector::LandmarkDetector() :
   this->get_parameter("publish_robot_frame", publish_robot_frame);
   this->get_parameter("laser_frame", laser_frame);
 
-  RCLCPP_INFO(this->get_logger(), "Publishing to frame  %s", publish_robot_frame.c_str());
+  //RCLCPP_INFO(this->get_logger(), "Publishing to frame  %s", publish_robot_frame.c_str());
 }
 
 float dist2(tf2::Vector3 *p1, tf2::Vector3 *p2) {
@@ -55,7 +55,7 @@ void robmovil_ekf::LandmarkDetector::on_laser_scan(const sensor_msgs::msg::Laser
     float range_min = msg->range_min;
     float range_max = msg->range_max;
     
-	if (range > range_max || range <= range_min)
+	if (range >= range_max || range <= range_min)
 		continue;
 
     float angle_min = msg->angle_min;
@@ -101,7 +101,7 @@ void robmovil_ekf::LandmarkDetector::on_laser_scan(const sensor_msgs::msg::Laser
     /* Al terminarse las mediciones provenientes al landmark que se venia detectando,
      * se calcula la pose del landmark como el centroide de las mediciones */
 
-    RCLCPP_INFO(this->get_logger(), "landmark con %zu puntos", landmark_points.size());
+    //RCLCPP_INFO(this->get_logger(), "landmark con %zu puntos", landmark_points.size());
     
     /* COMPLETAR: calcular el centroide de los puntos acumulados */
 
@@ -120,7 +120,7 @@ void robmovil_ekf::LandmarkDetector::on_laser_scan(const sensor_msgs::msg::Laser
 	centroid += centroidCopy * (LANDMARK_DIAMETER/2);
 	//centroid = laser_transform * centroid;
 
-    RCLCPP_INFO(this->get_logger(), "landmark detectado (cartesianas): %f %f %f", centroid.getX(), centroid.getY(), centroid.getZ());
+    //RCLCPP_INFO(this->get_logger(), "landmark detectado (cartesianas): %f %f %f", centroid.getX(), centroid.getY(), centroid.getZ());
     centroids.push_back(centroid);
 
     /* Convertir el centroide a coordenadas polares, construyendo el mensaje requerido */

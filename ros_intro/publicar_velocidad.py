@@ -8,7 +8,7 @@ class PublisherVelocity(Node):
 
     def __init__(self):
         super().__init__('publisher_velocity')
-        self.publisher_ = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.publisher_ = self.create_publisher(Twist, '/robot/cmd_vel', 10)
         timer_period = 0.5  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.i = 0
@@ -19,10 +19,11 @@ class PublisherVelocity(Node):
         #Completar con el mensaje a enviar por el nodo "publisher_velocity"
         
         # Establecemos la velocidad lineal para avanzar en línea recta
-        msg.linear.x = 0.0  # m/s
+        msg.linear.x = 0.2  # m/s
+        msg.linear.y = 0.0  # m/s
 
         # Establecemos la velocidad angular para girar en círculo
-        msg.angular.z = 0.2  # rad/s
+        msg.angular.z = 0.0  # rad/s
 
         self.publisher_.publish(msg)
         self.get_logger().info(f'Publishing Twist: linear.x={msg.linear.x}, angular.z={msg.angular.z}')

@@ -7,6 +7,7 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Transform.h>
 #include <tf2/LinearMath/Matrix3x3.h>
+#include <geometry_msgs/msg/pose_array.hpp>
 
 /**
  * TODO: abstraerse de los tipos internos (solo habria que lidiar con eso en los metodos a overridear
@@ -56,7 +57,7 @@ namespace robmovil_ekf
       /* modelo de sensado */
       void makeMeasure(void);
       
-      void set_map(const std::vector<Vector>& observations);
+      void set_map(const geometry_msgs::msg::PoseArray::SharedPtr posts);
       void set_delta_t(double delta); // seconds
       bool set_measure(const Vector& measured_z);
 

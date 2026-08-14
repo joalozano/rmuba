@@ -9,7 +9,7 @@ KeysToTwist::KeysToTwist() : Node("nh")
   key_down_sub_ = this->create_subscription<keyboard_msgs::msg::Key>("/keydown", 10, std::bind(&KeysToTwist::on_key_down, this, std::placeholders::_1));
 
   // anunciamos que vamos a publicar un mensaje de tipo geometry_msgs::msg::Twist en el tópico /cmd_vel.
-  twist_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 10);
+  twist_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("/robot/cmd_vel", 10);
 
   // ...
 
@@ -49,9 +49,9 @@ void KeysToTwist::on_key_up(const keyboard_msgs::msg::Key::SharedPtr key_event)
   else if (down_) twist.linear.x = -1.0;
   else twist.linear.x = 0.0;
 
-  if (left_) twist.angular.z = 1.0;
-  else if (right_) twist.angular.z = -1.0;
-  else twist.angular.z = 0.0;
+  if (left_) twist.linear.y = 1.0;
+  else if (right_) twist.linear.y = -1.0;
+  else twist.linear.y = 0.0;
 
   twist_pub_->publish(twist);
 }
@@ -87,9 +87,9 @@ void KeysToTwist::on_key_down(const keyboard_msgs::msg::Key::SharedPtr key_event
   else if (down_) twist.linear.x = -1.0;
   else twist.linear.x = 0.0;
 
-  if (left_) twist.angular.z = 1.0;
-  else if (right_) twist.angular.z = -1.0;
-  else twist.angular.z = 0.0;
+  if (left_) twist.linear.y = 1.0;
+  else if (right_) twist.linear.y = -1.0;
+  else twist.linear.y = 0.0;
   
   twist_pub_->publish( twist );
 }

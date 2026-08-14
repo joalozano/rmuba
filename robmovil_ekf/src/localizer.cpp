@@ -3,10 +3,9 @@
 #include "localizer.h"
 
 robmovil_ekf::Localizer::Localizer() :
-  Node("localizer_node"), u(2)
+  Node("localizer_node"), u(3)
 {
   u(1) = u(2) = u(3) = 0;
-  set_map = true;
   tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
 
   // Get node parameters
@@ -24,6 +23,7 @@ robmovil_ekf::Localizer::Localizer() :
   
   landmark_sub = this->create_subscription<robmovil_msgs::msg::LandmarkArray>( "/landmarks", rclcpp::QoS(10), std::bind(&Localizer::on_landmark_array, this, std::placeholders::_1));
   odo_sub = this->create_subscription<nav_msgs::msg::Odometry>( "/robot/odometry", rclcpp::QoS(10), std::bind(&Localizer::on_odometry, this, std::placeholders::_1));
+  post_sub = this->create_subscription<geometry_msgs::msg::PoseArray>("/posts", 10, std::bind(&Localizer::on_posts, this, std::placeholders::_1));
 
   pose_pub = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/pose", rclcpp::QoS(10));
   
@@ -38,7 +38,7 @@ robmovil_ekf::Localizer::Localizer() :
 
 void robmovil_ekf::Localizer::prediction_event()//const rclcpp::TimerEvent& event)
 {
-  RCLCPP_INFO(this->get_logger(), "Prediction Event");
+  //RCLCPP_INFO(this->get_logger(), "Prediction Event");
   
   prediction(this->now());
   
@@ -48,11 +48,11 @@ void robmovil_ekf::Localizer::prediction_event()//const rclcpp::TimerEvent& even
 
 void robmovil_ekf::Localizer::prediction(const rclcpp::Time& now)
 {
-  RCLCPP_INFO(this->get_logger(), "Prediction");
+  //RCLCPP_INFO(this->get_logger(), "Prediction");
 
   /* avanzar el tiempo del filtro desde el tiempo anterior al actual */
   advance_time(now);
-  RCLCPP_INFO(this->get_logger(), "t is now: %.3f", t.seconds());
+  //RCLCPP_INFO(this->get_logger(), "t is now: %.3f", t.seconds());
   
   /* hacer prediccion */
   ekf.timeUpdateStep(u);
@@ -60,41 +60,17 @@ void robmovil_ekf::Localizer::prediction(const rclcpp::Time& now)
   LocalizerEKF::Vector x = ekf.getX();
   LocalizerEKF::Matrix P = ekf.calculateP();
   
-  RCLCPP_INFO_STREAM(this->get_logger(), "Predicted estimate: " << x);
-  RCLCPP_INFO_STREAM(this->get_logger(), "Predicted covariance: " << P);
+  //RCLCPP_INFO_STREAM(this->get_logger(), "Predicted estimate: " << x);
+  //RCLCPP_INFO_STREAM(this->get_logger(), "Predicted covariance: " << P);
 }
 
 void robmovil_ekf::Localizer::on_landmark_array(const robmovil_msgs::msg::LandmarkArray::SharedPtr msg)
 {
-  RCLCPP_INFO(this->get_logger(), "Only prediction: %d", only_prediction); // Prints 0 or 1
+  //RCLCPP_INFO(this->get_logger(), "Only prediction: %d", only_prediction); // Prints 0 or 1
   if(only_prediction || msg->landmarks.size() < min_landmark_size )
     return;
   
-  RCLCPP_INFO(this->get_logger(), "on_landmark_array: %3.f", t.seconds());
-
-  /* Ante el primer update, tomo las poses de los postes y me las guardo como un mapa
-   * Se asume que la pose actual del robot es tomada como origen de la localizacion */
-  if (set_map)
-  {
-    RCLCPP_INFO(this->get_logger(), "Creating map");
-    
-    std::vector<LocalizerEKF::Vector> map;
-    for (int i = 0; i < msg->landmarks.size(); i++)
-    {
-      LocalizerEKF::Vector z(2);
-      
-      z(1) = msg->landmarks[i].range;
-      z(2) = msg->landmarks[i].bearing;
-      map.push_back(z);
-      
-      RCLCPP_INFO_STREAM(this->get_logger(), "Measurement: " << z);
-    }
-
-    ekf.set_map(map);
-    set_map = false;
-    
-    //return;
-  }
+  //RCLCPP_INFO(this->get_logger(), "on_landmark_array: %3.f", t.seconds());
   
   /* Se apaga el timer que predice periodicamente dado que
    * se predice y actualiza dadas las mediciones recibidas */
@@ -111,7 +87,7 @@ void robmovil_ekf::Localizer::on_landmark_array(const robmovil_msgs::msg::Landma
     z(1) = msg->landmarks[i].range;
     z(2) = msg->landmarks[i].bearing;
     
-    RCLCPP_INFO_STREAM(this->get_logger(), "Measurement update with: " << z);
+    //RCLCPP_INFO_STREAM(this->get_logger(), "Measurement update with: " << z);
     
     bool found_correspondence = ekf.set_measure(z);
 
@@ -119,8 +95,8 @@ void robmovil_ekf::Localizer::on_landmark_array(const robmovil_msgs::msg::Landma
     {
       ekf.measureUpdateStep(z);
       
-      RCLCPP_INFO_STREAM(this->get_logger(), "Measure updated estimate: " << ekf.getX());
-      RCLCPP_INFO_STREAM(this->get_logger(), "Measure updated covariance: " << ekf.calculateP());
+      //RCLCPP_INFO_STREAM(this->get_logger(), "Measure updated estimate: " << ekf.getX());
+      //RCLCPP_INFO_STREAM(this->get_logger(), "Measure updated covariance: " << ekf.calculateP());
     }
   }
 
@@ -136,7 +112,12 @@ void robmovil_ekf::Localizer::on_odometry(const nav_msgs::msg::Odometry::SharedP
   u(1) = msg->twist.twist.linear.x;
   u(2) = msg->twist.twist.linear.y;
   u(3) = msg->twist.twist.angular.z;
-  RCLCPP_INFO(this->get_logger(), "Received linear velocity X: %f", u(1));
+  //RCLCPP_INFO(this->get_logger(), "Received linear velocity X: %f", u(1));
+}
+
+void robmovil_ekf::Localizer::on_posts(const geometry_msgs::msg::PoseArray::SharedPtr posts)
+{
+	ekf.set_map(posts);
 }
 
 void robmovil_ekf::Localizer::advance_time(const rclcpp::Time& now)
@@ -150,7 +131,7 @@ void robmovil_ekf::Localizer::advance_time(const rclcpp::Time& now)
 
   ekf.set_delta_t(delta_t);
   t = now;
-  RCLCPP_INFO(this->get_logger(), "Time advanced by: %f", delta_t);
+  //RCLCPP_INFO(this->get_logger(), "Time advanced by: %f", delta_t);
 }
 
 void robmovil_ekf::Localizer::publish_estimate(const rclcpp::Time& now)

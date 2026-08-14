@@ -26,23 +26,20 @@ robmovil_ekf::LocalizerEKF::LocalizerEKF(void) : EKFilter(3, 3, 3, 2, 2)
   P(3,2) = 0;
   P(3,3) = 0.1;
 
-  RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Initial state x0: ( %f, %f, %f )", x0(1), x0(2), x0(3));
-  RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Initial cov P0: [ %f, %f, %f, %f, %f, %f, %f, %f, %f ]", P(1,1), P(1,2), P(1,3), P(2,1), P(2,2), P(2,3), P(3,1), P(3,2), P(3,3));
+  //RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Initial state x0: ( %f, %f, %f )", x0(1), x0(2), x0(3));
+  //RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Initial cov P0: [ %f, %f, %f, %f, %f, %f, %f, %f, %f ]", P(1,1), P(1,2), P(1,3), P(2,1), P(2,2), P(2,3), P(3,1), P(3,2), P(3,3));
 
   /* inicializa el filtro con estado y covarianza iniciales */
   init(x0, P); /* NOTA: esta llamada utiliza las referencias de x0 y P */
 }
 
-void robmovil_ekf::LocalizerEKF::set_map(const std::vector<LocalizerEKF::Vector>& observations)
+void robmovil_ekf::LocalizerEKF::set_map(const geometry_msgs::msg::PoseArray::SharedPtr posts)
 {
   /* Nota: Se asume x = 0, el origen de coordenadas del mapa comienza donde el robot esta ahora,
    * los landmarks se guardar en relacion al mapa */
-  for (int i = 0; i < observations.size(); i++)
-  {
-    tf2::Vector3 landmark = measure2landmark(observations[i]);
-    map_landmarks.push_back(landmark);
-    
-    RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Landmark: %f, %f, %f", landmark.getX(), landmark.getY(), landmark.getZ());
+  for (const auto& pose : posts->poses) {
+	  tf2::Vector3 landmark(pose.position.x, pose.position.y, 0);
+	  map_landmarks.push_back(landmark);
   }
 }
 
@@ -63,15 +60,15 @@ bool robmovil_ekf::LocalizerEKF::set_measure(const Vector& new_measure_z)
    * (lugar en el momento en que comenzo el sistema) */
   tf2::Vector3 landmark_cartesian = measure2landmark(new_measure_z);
   
-  RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Landmark (cartesian): %f, %f, %f", landmark_cartesian.getX(), landmark_cartesian.getY(), landmark_cartesian.getZ());
+  RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Measured Landmark (cartesian): %f, %f, %f", landmark_cartesian.getX(), landmark_cartesian.getY(), landmark_cartesian.getZ());
 
   /* Buscar en el mapa el landmark mas cercano a la observacion (establecimiento de correspondencia por nearest-neighbor) */
   bool found_correspondence = find_corresponding_landmark(landmark_cartesian, correspondence_landmark, NEAREST_NEIGHBOR_RADIUS);
   
-  if (!found_correspondence)
+  /*if (!found_correspondence)
     RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "No correspondence");
   else
-    RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Correspondence found: %f, %f, %f", correspondence_landmark.getX(), correspondence_landmark.getY(), correspondence_landmark.getZ());
+    RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Correspondence found: %f, %f, %f", correspondence_landmark.getX(), correspondence_landmark.getY(), correspondence_landmark.getZ());*/
   return found_correspondence;
 }
 
@@ -121,15 +118,15 @@ void robmovil_ekf::LocalizerEKF::makeBaseW(void)
 /** covarianza de W (ruido en f) */
 void robmovil_ekf::LocalizerEKF::makeBaseQ()
 {
-  Q(1,1) = 0.001; // Var(w1) = 0.1^2 (1 milimetro de desvio estandar)
+  Q(1,1) = 0.04; // Var(w1) = 0.1^2 (1 milimetro de desvio estandar)
   Q(1,2) = 0;
   Q(1,3) = 0;
   Q(2,1) = 0;
-  Q(2,2) = 0.001; // Var(w2) = 0.1^2
+  Q(2,2) = 0.04; // Var(w2) = 0.1^2
   Q(2,3) = 0;
   Q(3,1) = 0;
   Q(3,2) = 0;
-  Q(3,3) = pow(0.02,2); // Var(w3) = 0.1^2
+  Q(3,3) = pow(0.07,2); // Var(w3) = 0.1^2
 }
 
 /** Jacobiano de H respecto del modelo de sensado (h) (valores iniciales) **/
@@ -156,14 +153,14 @@ void robmovil_ekf::LocalizerEKF::makeH(void)
   tf2::Vector3 diff_robot_landmark = correspondence_landmark - robot_position;
 
   // Coordenadas cartesianas del landmark con respecto al robot
-  RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Relative_landmark: %f, %f, %f", diff_robot_landmark.getX(), diff_robot_landmark.getY(), diff_robot_landmark.getZ());
+  //RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Relative_landmark: %f, %f, %f", diff_robot_landmark.getX(), diff_robot_landmark.getY(), diff_robot_landmark.getZ());
 
   if (diff_robot_landmark.length2() < 0.001)
   {
     H(1,1) = H(2,2) = 1;
     H(1,2) = H(2,1) = 0;
 
-    RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Landmark too close to robot! Fake H used");
+    //RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Landmark too close to robot! Fake H used");
   } else {
     
     /* COMPLETAR: Calcular H en base al landmark del mapa relativo al robot */
@@ -194,7 +191,7 @@ void robmovil_ekf::LocalizerEKF::makeBaseV(void)
 /** Covarianza de v **/
 void robmovil_ekf::LocalizerEKF::makeBaseR()
 {
-  R(1,1) = 0.001; // Var(rho) = (0.1)^2 (desvio de 10cm)
+  R(1,1) = 0.001; // Original
   R(1,2) = 0;
   R(2,1) = 0;
   R(2,2) = 0.00007615435; // Var(phi) = (0.5 * pi / 180)^2 (desvio de 0.5 grados)
@@ -230,7 +227,7 @@ void robmovil_ekf::LocalizerEKF::makeMeasure(void)
 {
   z = landmark2measure(correspondence_landmark);
   
-  //RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Expected measure: %d", z);
+  //RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Expected measure: %f, %f", z(1), z(2));
 }
 
 /** Recibe una medicion de landmark reciente con respecto al origen del mapa (lugar en que comenzo el sistema)
@@ -256,6 +253,7 @@ bool robmovil_ekf::LocalizerEKF::find_corresponding_landmark(const tf2::Vector3&
 	  if (dist < delta_radio && dist < min_distance) {
 		min_distance = dist;
 		corresponding_landmark = map_landmarks[i];
+  		RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Expected Landmark (cartesian): %f, %f, %f", corresponding_landmark.getX(), corresponding_landmark.getY(), corresponding_landmark.getZ());
 		found = true;
 	  }
   }
@@ -311,7 +309,7 @@ robmovil_ekf::LocalizerEKF::Vector robmovil_ekf::LocalizerEKF::landmark2measure(
    *       del robot. CONSIDERAR la inversa de la transformacion que va desde el marco
    *       del mundo al marco del robot ( transform_world_robot.inverse() ) */  
   
-  RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Robot pose: %f  %f  %f", x(1), x(2), x(3));
+  //RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Robot pose: %f  %f  %f", x(1), x(2), x(3));
   
   /* Pose del robot contruida utilizando el estado estimado hasta este momento
    * (prior estate estimate) */
@@ -326,7 +324,7 @@ robmovil_ekf::LocalizerEKF::Vector robmovil_ekf::LocalizerEKF::landmark2measure(
   LocalizerEKF::Vector measure(2);
   measure(1) = relative_landmark.length(); // Calculo del rho
 
-  //relative_landmark.normalize();
+  relative_landmark.normalize();
   measure(2) = angles::normalize_angle(atan2(relative_landmark.getY(), relative_landmark.getX())); // Calculo del phi
 
 
