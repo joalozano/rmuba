@@ -2,10 +2,13 @@
 #define __ROBMOVIL_EKF_LOCALIZER_H__
 
 #include <rclcpp/rclcpp.hpp>
+#include <rclcpp/create_timer.hpp>
 #include <robmovil_msgs/msg/landmark_array.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/buffer.h>
 #include <tf2/LinearMath/Transform.h>
 #include <geometry_msgs/msg/pose_array.hpp>
 
@@ -19,7 +22,7 @@ namespace robmovil_ekf {
 
       void on_landmark_array(const robmovil_msgs::msg::LandmarkArray::SharedPtr msg);
       void on_odometry(const nav_msgs::msg::Odometry::SharedPtr msg);
-	  void on_posts(const geometry_msgs::msg::PoseArray::SharedPtr posts);
+      void on_posts(const geometry_msgs::msg::PoseArray::SharedPtr posts);
 
     private:
       LocalizerEKF ekf;
@@ -34,6 +37,11 @@ namespace robmovil_ekf {
       
       rclcpp::TimerBase::SharedPtr prediction_timer;
       std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+
+      // Para llevar los postes de "map" al frame en que trabaja el EKF (odom)
+      tf2_ros::Buffer tf_buffer_;
+      tf2_ros::TransformListener tf_listener_;
+      bool map_received_ = false;
       
       void prediction_event();
       void advance_time(const rclcpp::Time& now);

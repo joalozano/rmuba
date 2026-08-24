@@ -37,6 +37,7 @@ void robmovil_ekf::LocalizerEKF::set_map(const geometry_msgs::msg::PoseArray::Sh
 {
   /* Nota: Se asume x = 0, el origen de coordenadas del mapa comienza donde el robot esta ahora,
    * los landmarks se guardar en relacion al mapa */
+  map_landmarks.clear();
   for (const auto& pose : posts->poses) {
 	  tf2::Vector3 landmark(pose.position.x, pose.position.y, 0);
 	  map_landmarks.push_back(landmark);

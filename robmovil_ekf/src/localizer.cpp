@@ -3,7 +3,7 @@
 #include "localizer.h"
 
 robmovil_ekf::Localizer::Localizer() :
-  Node("localizer_node"), u(3)
+  Node("localizer_node"), u(3), tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_)
 {
   u(1) = u(2) = u(3) = 0;
   tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
@@ -21,22 +21,39 @@ robmovil_ekf::Localizer::Localizer() :
   this->get_parameter("only_prediction", only_prediction);
   this->get_parameter("min_landmark_size", min_landmark_size);
   
-  landmark_sub = this->create_subscription<robmovil_msgs::msg::LandmarkArray>( "/landmarks", rclcpp::QoS(10), std::bind(&Localizer::on_landmark_array, this, std::placeholders::_1));
-  odo_sub = this->create_subscription<nav_msgs::msg::Odometry>( "/robot/odometry", rclcpp::QoS(10), std::bind(&Localizer::on_odometry, this, std::placeholders::_1));
-  post_sub = this->create_subscription<geometry_msgs::msg::PoseArray>("/posts", 10, std::bind(&Localizer::on_posts, this, std::placeholders::_1));
+  landmark_sub = this->create_subscription<robmovil_msgs::msg::LandmarkArray>(
+      "/landmarks", rclcpp::QoS(10),
+      std::bind(&Localizer::on_landmark_array, this, std::placeholders::_1));
+  odo_sub = this->create_subscription<nav_msgs::msg::Odometry>(
+      "/robot/odometry", rclcpp::QoS(10),
+      std::bind(&Localizer::on_odometry, this, std::placeholders::_1));
+
+  // /posts suele publicarse latched/transient_local; usamos QoS compatible
+  rclcpp::QoS posts_qos(rclcpp::KeepLast(1));
+  posts_qos.reliable();
+  posts_qos.transient_local();
+  
+  post_sub = this->create_subscription<geometry_msgs::msg::PoseArray>(
+      "/posts", posts_qos, std::bind(&Localizer::on_posts, this, std::placeholders::_1));
 
   pose_pub = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/pose", rclcpp::QoS(10));
   
-  while((this->now().nanoseconds() == 0));
+  while ((this->now().nanoseconds() == 0));
   t = this->now();
-  prediction_timer = this->create_wall_timer(std::chrono::milliseconds(10), std::bind(&Localizer::prediction_event, this));
+
+  // IMPORTANTE: timer atado al reloj del nodo (respeta use_sim_time),
+  // no create_wall_timer.
+
+  prediction_timer = rclcpp::create_timer(
+      this, this->get_clock(), std::chrono::milliseconds(10),
+      std::bind(&Localizer::prediction_event, this));
 }
 
 /**
  * Prediccion hecha periódicamente, en caso de que no haya habido sensado por cierto tiempo
  */
 
-void robmovil_ekf::Localizer::prediction_event()//const rclcpp::TimerEvent& event)
+void robmovil_ekf::Localizer::prediction_event() //const rclcpp::TimerEvent& event)
 {
   //RCLCPP_INFO(this->get_logger(), "Prediction Event");
   
@@ -57,8 +74,8 @@ void robmovil_ekf::Localizer::prediction(const rclcpp::Time& now)
   /* hacer prediccion */
   ekf.timeUpdateStep(u);
 
-  LocalizerEKF::Vector x = ekf.getX();
-  LocalizerEKF::Matrix P = ekf.calculateP();
+  // LocalizerEKF::Vector x = ekf.getX();
+  // LocalizerEKF::Matrix P = ekf.calculateP();
   
   //RCLCPP_INFO_STREAM(this->get_logger(), "Predicted estimate: " << x);
   //RCLCPP_INFO_STREAM(this->get_logger(), "Predicted covariance: " << P);
@@ -67,7 +84,7 @@ void robmovil_ekf::Localizer::prediction(const rclcpp::Time& now)
 void robmovil_ekf::Localizer::on_landmark_array(const robmovil_msgs::msg::LandmarkArray::SharedPtr msg)
 {
   //RCLCPP_INFO(this->get_logger(), "Only prediction: %d", only_prediction); // Prints 0 or 1
-  if(only_prediction || msg->landmarks.size() < min_landmark_size )
+  if (only_prediction || (int)msg->landmarks.size() < min_landmark_size || !map_received_)
     return;
   
   //RCLCPP_INFO(this->get_logger(), "on_landmark_array: %3.f", t.seconds());
@@ -80,7 +97,7 @@ void robmovil_ekf::Localizer::on_landmark_array(const robmovil_msgs::msg::Landma
   prediction(msg->header.stamp);
 
   /* hacer update(s) */
-  for (int i = 0; i < msg->landmarks.size(); i++)
+  for (size_t i = 0; i < msg->landmarks.size(); i++)
   {
     LocalizerEKF::Vector z(2);
     
@@ -89,15 +106,11 @@ void robmovil_ekf::Localizer::on_landmark_array(const robmovil_msgs::msg::Landma
     
     //RCLCPP_INFO_STREAM(this->get_logger(), "Measurement update with: " << z);
     
-    bool found_correspondence = ekf.set_measure(z);
-
-    if (found_correspondence)
-    {
+    if (ekf.set_measure(z))
       ekf.measureUpdateStep(z);
       
       //RCLCPP_INFO_STREAM(this->get_logger(), "Measure updated estimate: " << ekf.getX());
       //RCLCPP_INFO_STREAM(this->get_logger(), "Measure updated covariance: " << ekf.calculateP());
-    }
   }
 
   /* publicar estimado actual */
@@ -117,7 +130,48 @@ void robmovil_ekf::Localizer::on_odometry(const nav_msgs::msg::Odometry::SharedP
 
 void robmovil_ekf::Localizer::on_posts(const geometry_msgs::msg::PoseArray::SharedPtr posts)
 {
-	ekf.set_map(posts);
+	// /posts viene en frame "map". El EKF trabaja en "odom" (mismo origen
+  // que la odometría de rueda). Hace falta transformar los postes.
+  std::string map_frame = posts->header.frame_id.empty() ? "map" : posts->header.frame_id;
+
+  geometry_msgs::msg::TransformStamped map_to_odom;
+  try
+  {
+    map_to_odom = tf_buffer_.lookupTransform(
+        "odom", map_frame, posts->header.stamp, tf2::durationFromSec(1.0));
+  }
+  catch (tf2::TransformException& ex)
+  {
+    RCLCPP_WARN(this->get_logger(),
+                "No pude obtener map->odom en el stamp de /posts (%s), reintento con la ultima disponible",
+                ex.what());
+    try
+    {
+      map_to_odom = tf_buffer_.lookupTransform("odom", map_frame, tf2::TimePointZero);
+    }
+    catch (tf2::TransformException& ex2)
+    {
+      RCLCPP_ERROR(this->get_logger(), "No se pudo transformar el mapa de postes: %s", ex2.what());
+      return;
+    }
+  }
+
+  auto posts_in_odom = std::make_shared<geometry_msgs::msg::PoseArray>();
+  posts_in_odom->header.frame_id = "odom";
+  posts_in_odom->header.stamp = posts->header.stamp;
+  posts_in_odom->poses.reserve(posts->poses.size());
+
+  for (const auto& pose : posts->poses)
+  {
+    geometry_msgs::msg::Pose transformed;
+    tf2::doTransform(pose, transformed, map_to_odom);
+    posts_in_odom->poses.push_back(transformed);
+  }
+
+  ekf.set_map(posts_in_odom);
+  map_received_ = true;
+  RCLCPP_INFO(this->get_logger(), "Mapa de %zu postes cargado (transformado a odom)", posts_in_odom->poses.size());
+
 }
 
 void robmovil_ekf::Localizer::advance_time(const rclcpp::Time& now)
@@ -125,8 +179,8 @@ void robmovil_ekf::Localizer::advance_time(const rclcpp::Time& now)
   double delta_t = (now - t).seconds();
 
   if (delta_t < 0) {
-	  RCLCPP_ERROR_STREAM(this->get_logger(), "Negative delta_t! " << delta_t);
-	  return;
+    RCLCPP_WARN_STREAM(this->get_logger(), "Negative delta_t, ignorado: " << delta_t);
+    return;
   }
 
   ekf.set_delta_t(delta_t);
@@ -170,19 +224,18 @@ void robmovil_ekf::Localizer::publish_estimate(const rclcpp::Time& now)
   /* set pose */
   tf2::Transform map_to_base_link;
   map_to_base_link.setOrigin(tf2::Vector3(x(1), x(2), 0));
-  map_to_base_link.setRotation(tf2::Quaternion(tf2::Vector3(0,0,1),x(3)));
+  map_to_base_link.setRotation(tf2::Quaternion(tf2::Vector3(0,0,1), x(3)));
   tf2::toMsg(map_to_base_link, pose_msg.pose.pose);
 
   /* publish */
-  pose_pub->publish( pose_msg );
+  pose_pub->publish(pose_msg);
 
   // publish TF transform between ekf frame and robot frame
   geometry_msgs::msg::TransformStamped map_to_base_link_msg;
   map_to_base_link_msg.header.frame_id = map_frame_;
   map_to_base_link_msg.header.stamp = now;
   map_to_base_link_msg.child_frame_id = base_frame_;
+  map_to_base_link_msg.transform = tf2::toMsg(map_to_base_link);
 
-  map_to_base_link_msg.transform = tf2::toMsg( map_to_base_link );
-
-  tf_broadcaster_->sendTransform( map_to_base_link_msg );
+  tf_broadcaster_->sendTransform(map_to_base_link_msg);
 }

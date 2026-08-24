@@ -92,7 +92,7 @@ void robmovil_ekf::LandmarkDetector::on_laser_scan(const sensor_msgs::msg::Laser
   for (int i = 1; i < cartesian.size(); i++)
   {
     /* COMPLETAR: Acumular, de manera secuencial, mediciones cercanas (distancia euclidea) */
-	#define D_TOL 0.05
+	#define D_TOL 0.1
 	if (((cartesian[i] - landmark_points.back()).length() <= D_TOL)) {
 		landmark_points.push_back(cartesian[i]);
       		continue;

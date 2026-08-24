@@ -11,7 +11,7 @@ def agregar_nodos_ekf():
             executable='landmark_detector',
             name='landmark_detector',
             output='screen',
-            parameters=[{'publish_robot_frame': 'base_link_ekf'},
+            parameters=[{'publish_robot_frame': 'base_link'},
                         {"use_sim_time": True}]
         ),
         Node(
@@ -21,6 +21,8 @@ def agregar_nodos_ekf():
             output='screen',
             parameters=[{'only_prediction': False},
                         {'min_landmark_size': 3},
+                        {"base_link_frame": "base_link"},
+                        {"ekf_frame": "odom"},
                         {"use_sim_time": True}],
         )
     ]
