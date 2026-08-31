@@ -28,13 +28,17 @@ robmovil_ekf::Localizer::Localizer() :
       "/robot/odometry", rclcpp::QoS(10),
       std::bind(&Localizer::on_odometry, this, std::placeholders::_1));
 
-  // /posts suele publicarse latched/transient_local; usamos QoS compatible
-  rclcpp::QoS posts_qos(rclcpp::KeepLast(1));
-  posts_qos.reliable();
-  posts_qos.transient_local();
-  
+  /* NOTA: antes se pedia QoS reliable + transient_local para /posts. Si el publisher del
+   * simulador es volatile (lo mas comun, salvo que la escena lo configure explicitamente
+   * como transient_local), esa combinacion es INCOMPATIBLE en ROS2 -- un publisher volatile
+   * no matchea con un subscriber que pide transient_local -- y la suscripcion nunca conecta,
+   * sin tirar excepcion (solo un warning de QoS en el log). Si eso pasaba: map_received_
+   * quedaba en false para siempre, on_landmark_array() cortaba apenas entraba, measureUpdateStep()
+   * nunca se ejecutaba, y la covarianza solo podia crecer -- exactamente el sintoma reportado.
+   * Usamos QoS por default (volatile), que es compatible tanto si el publisher es volatile
+   * como si es transient_local. */
   post_sub = this->create_subscription<geometry_msgs::msg::PoseArray>(
-      "/posts", posts_qos, std::bind(&Localizer::on_posts, this, std::placeholders::_1));
+      "/posts", rclcpp::QoS(10), std::bind(&Localizer::on_posts, this, std::placeholders::_1));
 
   pose_pub = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/pose", rclcpp::QoS(10));
   
@@ -193,9 +197,43 @@ void robmovil_ekf::Localizer::publish_estimate(const rclcpp::Time& now)
   LocalizerEKF::Vector x = ekf.getX();
   LocalizerEKF::Matrix P = ekf.calculateP();
 
+  /* Pose estimada por el EKF, en el frame en el que integra la odometria (parametro
+   * ekf_frame, "odom" por defecto -- mismo origen que la odometria de rueda) */
+  tf2::Transform ekf_frame_to_base_link;
+  ekf_frame_to_base_link.setOrigin(tf2::Vector3(x(1), x(2), 0));
+  ekf_frame_to_base_link.setRotation(tf2::Quaternion(tf2::Vector3(0,0,1), x(3)));
+
+  /* El enunciado pide publicar la transformacion map -> base_link_ekf directamente
+   * (punto 4.c), no odom -> base_link_ekf. La componemos con la map -> ekf_frame que ya
+   * publica el simulador (map -> odom), en vez de dejar que un consumidor externo tenga
+   * que encadenar ambas tf por su cuenta.
+   *
+   * NOTA: la covarianza publicada abajo queda expresada tal cual la calcula el EKF (en el
+   * frame ekf_frame), sin rotarla por la orientacion de map->ekf_frame. Si esa transformacion
+   * tuviera una rotacion distinta de cero, el elipsoide de covarianza en RViz quedaria
+   * desalineado respecto del frame map -- para este TP alcanza, pero si hace falta mas
+   * precision habria que rotar tambien el bloque de covarianza XY. */
+  tf2::Transform map_to_base_link = ekf_frame_to_base_link;
+
+  try
+  {
+    geometry_msgs::msg::TransformStamped map_to_ekf_frame_msg =
+        tf_buffer_.lookupTransform("map", map_frame_, tf2::TimePointZero);
+    tf2::Transform map_to_ekf_frame;
+    tf2::fromMsg(map_to_ekf_frame_msg.transform, map_to_ekf_frame);
+    map_to_base_link = map_to_ekf_frame * ekf_frame_to_base_link;
+  }
+  catch (tf2::TransformException& ex)
+  {
+    RCLCPP_WARN(this->get_logger(),
+                "No pude obtener map -> %s para publicar map -> base_link_ekf (%s); "
+                "publico la pose sin componer (asumiendo map == %s por ahora)",
+                map_frame_.c_str(), ex.what(), map_frame_.c_str());
+  }
+
   geometry_msgs::msg::PoseWithCovarianceStamped pose_msg;
   pose_msg.header.stamp = now;
-  pose_msg.header.frame_id = map_frame_;
+  pose_msg.header.frame_id = "map";
 
   /* build covariance */
   pose_msg.pose.covariance.fill(0.0);
@@ -221,18 +259,15 @@ void robmovil_ekf::Localizer::publish_estimate(const rclcpp::Time& now)
   pose_msg.pose.covariance[3 * 6 + 3] = -1;
   pose_msg.pose.covariance[4 * 6 + 4] = -1;
 
-  /* set pose */
-  tf2::Transform map_to_base_link;
-  map_to_base_link.setOrigin(tf2::Vector3(x(1), x(2), 0));
-  map_to_base_link.setRotation(tf2::Quaternion(tf2::Vector3(0,0,1), x(3)));
+  /* set pose (ya compuesta a map -> base_link_ekf) */
   tf2::toMsg(map_to_base_link, pose_msg.pose.pose);
 
   /* publish */
   pose_pub->publish(pose_msg);
 
-  // publish TF transform between ekf frame and robot frame
+  // publish TF transform: map -> base_link_ekf (directo, segun pide el enunciado)
   geometry_msgs::msg::TransformStamped map_to_base_link_msg;
-  map_to_base_link_msg.header.frame_id = map_frame_;
+  map_to_base_link_msg.header.frame_id = "map";
   map_to_base_link_msg.header.stamp = now;
   map_to_base_link_msg.child_frame_id = base_frame_;
   map_to_base_link_msg.transform = tf2::toMsg(map_to_base_link);
