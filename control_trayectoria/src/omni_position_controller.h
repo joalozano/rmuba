@@ -9,6 +9,8 @@
 #include <tf2/utils.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <angles/angles.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/buffer.h>
 
 class OmniPositionController : public OmniTrajectoryFollower
 {
@@ -24,6 +26,12 @@ private:
 	rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr goal_pub_;
 	rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
 	rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_sub_;
+
+	// La trayectoria (/robot/trajectory) esta expresada en frame "odom", pero /pose
+	// (salida del localizer EKF) esta en frame "map" (map -> base_link_ekf). Hace
+	// falta transformar antes de comparar contra los waypoints.
+	tf2_ros::Buffer tf_buffer_;
+	tf2_ros::TransformListener tf_listener_;
 
 	int current_wp_ = 0;
 	double x_ = 0.0;

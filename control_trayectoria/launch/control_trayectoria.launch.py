@@ -11,7 +11,7 @@ def agregar_nodos_ekf():
             executable='landmark_detector',
             name='landmark_detector',
             output='screen',
-            parameters=[{'publish_robot_frame': 'base_link'},
+            parameters=[{'publish_robot_frame': 'base_link_ekf'},
                         {"use_sim_time": True}]
         ),
         Node(
@@ -21,7 +21,7 @@ def agregar_nodos_ekf():
             output='screen',
             parameters=[{'only_prediction': False},
                         {'min_landmark_size': 3},
-                        {"base_link_frame": "base_link"},
+                        {"base_link_frame": "base_link_ekf"},
                         {"ekf_frame": "odom"},
                         {"use_sim_time": True}],
         )
@@ -56,10 +56,10 @@ def generate_launch_description():
                 {"stepping": float(0.1)},
                 {'spline_waypoints': [
                     0., 0., 0., 0.,
-                    15., 0., -4., -1.57,
-                    30., -4., -4., 3.14,
-                    45., -4., 0., 1.57,
-                    60., 0., 0., 0.
+                    5., 0., -4., -1.57,
+                    10., -4., -4., 3.14,
+                    15., -4., 0., 1.57,
+                    20., 0., 0., 0.
                 ]}
             ],  
         ),

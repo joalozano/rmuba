@@ -11,6 +11,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <angles/angles.h>
 
+// este módulo es una modificación del módulo usado dentro de la cursada. Se eliminaron las trayectorias time-based y las sinoidales, para proveer únicamente trayectorias basadas en splines
 
 void build_spline_trajectory(double, std::vector<std::vector<double>>&, robmovil_msgs::msg::Trajectory&, nav_msgs::msg::Path&);
 inline void compute_waypoint_velocities(std::vector<std::vector<double>>& wpoints, int wpoint_count);
@@ -77,7 +78,7 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
 	if (wpoint_count <= 1)
 		return;
 	
-	// parámetros de curvatura: velocidades esperadas en el punto actual y el siguiente
+	// parámetros de curvatura: velocidades esperadas en el punto actual y el siguiente. obtenidos experimentalmente; una alternativa sería obtener (var1 - var0) / delta_t
 	constexpr double n0 = 0.08,
 			  		 n1 = 0.03;
 
@@ -90,6 +91,7 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
 		if ((tf - ti) <= 0)
 			continue;
 
+		// posiciones (x,y,angulo) iniciales y finales en un tramo específico
 		double xi = wpoints[i][1],
 		       yi = wpoints[i][2],
 		       ai = wpoints[i][3];
@@ -99,7 +101,7 @@ void build_spline_trajectory(double stepping, std::vector<std::vector<double>>& 
 		double dangular = angles::normalize_angle(af - ai); // normalizamos la distancia entre ángulos, así se mantiene el rango en [-pi,pi]
 
 
-		// coeficientes para calcular x(t)
+		// coeficientes para calcular x(t), que implementa lo visto en la clase de generación de trayectorias basada en splines para un robot holonómico
 		double a0 = xi,
 		       a1 = n0,
 		       a2 = (3/(dt*dt))*(xf - xi) - (2/dt)*n0 - n1/dt,

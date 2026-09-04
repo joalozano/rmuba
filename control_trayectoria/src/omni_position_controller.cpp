@@ -11,7 +11,8 @@
 
 
 OmniPositionController::OmniPositionController() :
-	OmniTrajectoryFollower(), x_(0.0), y_(0.0), theta_(0), current_wp_(0)
+	OmniTrajectoryFollower(), x_(0.0), y_(0.0), theta_(0), current_wp_(0),
+	tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_)
 {
 	rclcpp::QoS qos_profile(rclcpp::KeepLast(50));
 	qos_profile.reliable();
@@ -36,9 +37,10 @@ void OmniPositionController::getCurrentPoseFromOdometry(const nav_msgs::msg::Odo
 
 void OmniPositionController::getCurrentPoseFromLocalizer(const geometry_msgs::msg::PoseWithCovarianceStamped& pose)
 {
+	geometry_msgs::msg::PoseWithCovarianceStamped pose_odom;
+
 	x_ = pose.pose.pose.position.x;
 	y_ = pose.pose.pose.position.y;
-
 	theta_ = tf2::getYaw(pose.pose.pose.orientation);
 }
 
@@ -53,6 +55,7 @@ bool OmniPositionController::getPursuitBasedGoal(double& gx, double& gy, double&
 	
 	double ca = tf2::getYaw(traj.points[current_wp_].transform.rotation);
 	// validamos que ya estamos apuntando a donde se espera antes de buscar el próximo waypoint en el plano x,y
+	// buscamos el próximo punto más cercano que está a distancia lookahead, considerando que el arreglo tiene la trayectoria ordenada por tiempo y, por ende, por posiciones cercanas.
 	if (fabs(angles::normalize_angle(ca - theta_)) < ATOL) {
 		for (size_t i = current_wp_; i < wp_count; i++)
 		{
@@ -109,11 +112,10 @@ bool OmniPositionController::control(const rclcpp::Time& t, double& vx, double& 
 	}
 	w  = KTH * etheta_r;
 
-	// para debugging
+	// para debugging, comparamos posición a la posición deseada
 	RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 333,
 			"t: %.2f, gx: %.2f, gy: %.2f, gth: %.2f, x_: %.2f, y_: %.2f, th_: %.2f", t.seconds(), gx, gy, ga, x_, y_, theta_);
-	// imprimimos las velocidades en un formato csv-friendly, con una espera de 100ms
-	// idem con posiciones esperadas y actuales
+	// ahora en un formato csv-friendly, incluyendo las velocidades
 	/*RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 333,
 			"%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f", t.seconds(), gx, gy, ga, x_, y_, theta_,vx,vy,w);*/
 

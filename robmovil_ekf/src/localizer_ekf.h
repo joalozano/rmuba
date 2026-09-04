@@ -13,6 +13,8 @@
  * TODO: abstraerse de los tipos internos (solo habria que lidiar con eso en los metodos a overridear
  */
 
+// Este módulo es una adaptación del usado durante la materia: cambiamos las dimensiones y las actualizaciones para considerar U(3) en lugar de U(2). Al mismo tiempo, en set_map aprovechamos el tópico /posts
+
 namespace robmovil_ekf
 {
   typedef Kalman::EKFilter<double,1,false,false,false> EKFilter;

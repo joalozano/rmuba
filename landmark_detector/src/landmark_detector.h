@@ -12,6 +12,8 @@
 #include <tf2_ros/buffer.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 
+// este módulo es la copia casi exacta del módulo implementado en clase. Tuvimos que cambiar de dónde se lee el scan: /robot/front_laser/scan
+
 namespace robmovil_ekf
 {
   /*

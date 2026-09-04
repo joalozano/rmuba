@@ -34,6 +34,7 @@ class OmniOdometry : public rclcpp::Node
 
 	void on_encoder_ticks(const robmovil_msgs::msg::MultiEncoderTicks::SharedPtr encoder);
 
+	// función para comparar /robot/ground_truth con /robot/odometry
 	void gt_callback(const nav_msgs::msg::Odometry::SharedPtr gt);
 
   private:
@@ -42,8 +43,6 @@ class OmniOdometry : public rclcpp::Node
 	rclcpp::Subscription<robmovil_msgs::msg::MultiEncoderTicks>::SharedPtr encoder_sub_;
 	rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr gt_sub_;
 
-	//rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr vel_pub_left_;
-	//rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr vel_pub_right_;
 	// publishers para la velocidad de cada rueda mecanum, usando la misma convención de numeración que ticks[WHEEL_COUNT]
 	rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr pub_vel_[WHEEL_COUNT];
 
