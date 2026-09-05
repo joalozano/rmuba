@@ -150,7 +150,7 @@ bool robmovil_ekf::LandmarkDetector::update_laser_tf(const rclcpp::Time& require
 {
 	try
 	{
-		geometry_msgs::msg::TransformStamped transformStamped = tf_buffer.lookupTransform("base_link", "laser", required_time, tf2::durationFromSec(0.1));
+		geometry_msgs::msg::TransformStamped transformStamped = tf_buffer.lookupTransform("base_link", "front_laser", required_time, tf2::durationFromSec(0.1));
 		tf2::fromMsg(transformStamped.transform, laser_transform);
 		return true;
 	}

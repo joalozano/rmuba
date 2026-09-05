@@ -18,21 +18,27 @@ OmniPositionController::OmniPositionController() :
 	qos_profile.reliable();
 	qos_profile.durability_volatile();
 	this->declare_parameter("base_link_frame", std::string("base_link")); // por default, usar odometría
-	base_frame_ = this->get_parameter("base_link_frame");
+	this->get_parameter("base_link_frame", base_frame_);
 
 	goal_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/goal_pose", 10);
 
 	while ((this->now().nanoseconds() == 0));
-	position_timer = this->create_wall_timer(std::chrono::milliseconds(10), std::bind(OmniPositionController::getCurrentPose, this));
+	position_timer = this->create_wall_timer(std::chrono::milliseconds(10), std::bind(&OmniPositionController::getCurrentPose, this));
 }
 
-void getCurrentPose()
+void OmniPositionController::getCurrentPose()
 {
 	try {
 		auto transform = tf_buffer_.lookupTransform("map", base_frame_, tf2::TimePointZero);
+		// para depurar: obtenemos la posición gt del robot y la comparamos con nuestra estimación
+		auto gt = tf_buffer_.lookupTransform("map", "base_link_gt", tf2::TimePointZero);
 		x_ = transform.transform.translation.x;
 		y_ = transform.transform.translation.y;
 		theta_ = tf2::getYaw(transform.transform.rotation);
+		RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 333,
+		"%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f",
+		this->get_clock()->now().seconds(), gt.transform.translation.x, gt.transform.translation.y, tf2::getYaw(gt.transform.rotation), x_, y_, theta_);
+
 	} catch (tf2::TransformException &ex) {
 		RCLCPP_WARN(this->get_logger(), "No se pudo obtener posición.");
 	}
@@ -107,8 +113,8 @@ bool OmniPositionController::control(const rclcpp::Time& t, double& vx, double& 
 	w  = KTH * etheta_r;
 
 	// para debugging, comparamos posición a la posición deseada
-	RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 333,
-			"t: %.2f, gx: %.2f, gy: %.2f, gth: %.2f, x_: %.2f, y_: %.2f, th_: %.2f", t.seconds(), gx, gy, ga, x_, y_, theta_);
+	/*RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 333,
+			"t: %.2f, gx: %.2f, gy: %.2f, gth: %.2f, x_: %.2f, y_: %.2f, th_: %.2f", t.seconds(), gx, gy, ga, x_, y_, theta_);*/
 	// ahora en un formato csv-friendly, incluyendo las velocidades
 	/*RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 333,
 			"%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f", t.seconds(), gx, gy, ga, x_, y_, theta_,vx,vy,w);*/

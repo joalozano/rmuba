@@ -33,7 +33,6 @@ namespace robmovil_ekf {
       rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odo_sub;
       rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr post_sub;
       rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_pub;
-      std::string base_frame_, map_frame_, laser_frame_;
       
       rclcpp::TimerBase::SharedPtr prediction_timer;
       std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;

@@ -8,6 +8,8 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 
+#define WHEEL_COUNT 4
+
 namespace robmovil
 {
 
@@ -21,14 +23,10 @@ class OmniOdometry : public rclcpp::Node
 
 	void on_encoder_ticks(const robmovil_msgs::msg::MultiEncoderTicks::SharedPtr encoder);
 
-	// función para comparar /robot/ground_truth con /robot/odometry
-	void gt_callback(const nav_msgs::msg::Odometry::SharedPtr gt);
-
   private:
 
 	rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr twist_sub_;
 	rclcpp::Subscription<robmovil_msgs::msg::MultiEncoderTicks>::SharedPtr encoder_sub_;
-	rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr gt_sub_;
 
 	// publishers para la velocidad de cada rueda mecanum, usando la misma convención de numeración que ticks[WHEEL_COUNT]
 	rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr pub_vel_[WHEEL_COUNT];

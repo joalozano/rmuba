@@ -41,11 +41,6 @@ OmniOdometry::OmniOdometry() : Node("nodeOdometry"), x_(0), y_(0), theta_(0), ti
 			"/robot/encoders", rclcpp::QoS(10),
 			std::bind(&OmniOdometry::on_encoder_ticks, this, std::placeholders::_1));
 
-	// un suscriptor a ground_truth para reportar los valores de posición reales. Lo usamos para debug y experimentar
-	/*gt_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
-		"/robot/ground_truth", rclcpp::QoS(10),
-		std::bind(&OmniOdometry::gt_callback, this, std::placeholders::_1));*/
-
 	pub_vel_[0] = this->create_publisher<std_msgs::msg::Float64>(
 			"/robot/front_left_wheel/cmd_vel", rclcpp::QoS(10));
 	pub_vel_[1] = this->create_publisher<std_msgs::msg::Float64>(
@@ -177,10 +172,4 @@ void OmniOdometry::on_encoder_ticks(const robmovil_msgs::msg::MultiEncoderTicks:
 	/*RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 333,
     "lec:%f,%f,%f,%f",
     last_ticks_time.seconds(), vx, vy, w);*/
-}
-
-void OmniOdometry::gt_callback(const nav_msgs::msg::Odometry::SharedPtr gt) {
-	RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 333,
-    "%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f",
-    this->get_clock()->now().seconds(), gt->pose.pose.position.x, gt->pose.pose.position.y, tf2::getYaw(gt->pose.pose.orientation), x_, y_, theta_);
 }

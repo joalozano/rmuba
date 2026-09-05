@@ -109,7 +109,7 @@ void robmovil_ekf::Localizer::on_posts(const geometry_msgs::msg::PoseArray::Shar
 {
 	ekf.set_map(posts);
 	map_received_ = true;
-	RCLCPP_INFO(this->get_logger(), "Mapa de %zu postes cargado (transformado a base_link)", posts_in_base_link->poses.size());
+	//RCLCPP_INFO(this->get_logger(), "Mapa de %zu postes cargado (transformado a base_link)", posts->poses.size());
 
 }
 
@@ -168,7 +168,6 @@ void robmovil_ekf::Localizer::publish_estimate(const rclcpp::Time& now)
 
 	/* publish */
 	pose_pub->publish(pose_msg);
-
 	// publish TF transform: map -> base_link_ekf (directo, segun pide el enunciado)
 	geometry_msgs::msg::TransformStamped map_to_base_link_msg;
 	map_to_base_link_msg.header.stamp = now;

@@ -8,10 +8,6 @@ from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
     return LaunchDescription([
-        DeclareLaunchArgument('debug', default_value='true'),
-        DeclareLaunchArgument('detector', default_value='true'),
-        DeclareLaunchArgument('log_level', default_value='info'),
-
         Node(
             package='landmark_detector',
             executable='landmark_detector',

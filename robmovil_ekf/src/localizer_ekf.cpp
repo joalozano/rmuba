@@ -61,7 +61,7 @@ bool robmovil_ekf::LocalizerEKF::set_measure(const Vector& new_measure_z)
    * (lugar en el momento en que comenzo el sistema) */
   tf2::Vector3 landmark_cartesian = measure2landmark(new_measure_z);
   
-  RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Measured Landmark (cartesian): %f, %f, %f", landmark_cartesian.getX(), landmark_cartesian.getY(), landmark_cartesian.getZ());
+  //RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Measured Landmark (cartesian): %f, %f, %f", landmark_cartesian.getX(), landmark_cartesian.getY(), landmark_cartesian.getZ());
 
   /* Buscar en el mapa el landmark mas cercano a la observacion (establecimiento de correspondencia por nearest-neighbor) */
   bool found_correspondence = find_corresponding_landmark(landmark_cartesian, correspondence_landmark, NEAREST_NEIGHBOR_RADIUS);
@@ -256,7 +256,7 @@ bool robmovil_ekf::LocalizerEKF::find_corresponding_landmark(const tf2::Vector3&
 	  if (dist < delta_radio && dist < min_distance) {
 		min_distance = dist;
 		corresponding_landmark = map_landmarks[i];
-  		RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Expected Landmark (cartesian): %f, %f, %f", corresponding_landmark.getX(), corresponding_landmark.getY(), corresponding_landmark.getZ());
+  		//RCLCPP_INFO(rclcpp::get_logger("robmovil_ekf"), "Expected Landmark (cartesian): %f, %f, %f", corresponding_landmark.getX(), corresponding_landmark.getY(), corresponding_landmark.getZ());
 		found = true;
 	  }
   }

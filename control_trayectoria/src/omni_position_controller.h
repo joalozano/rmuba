@@ -29,14 +29,15 @@ private:
 
 	tf2_ros::Buffer tf_buffer_;
 	tf2_ros::TransformListener tf_listener_;
-	std::string base_frame_; // frame del robot (base_link para odom o base_link_ekf para ekf)
 	rclcpp::TimerBase::SharedPtr position_timer;
+	std::string base_frame_; // frame del robot (base_link para odom o base_link_ekf para ekf)
 
 	int current_wp_ = 0;
 	double x_ = 0.0;
 	double y_ = 0.0;
 	double theta_ = 0.0;
 
+	// obtenemos la pose de alguna transformación al frame del robot deseado
 	void getCurrentPose();
 
 	// Implementaremos únicamente pursuit-based trajectories para el TP
