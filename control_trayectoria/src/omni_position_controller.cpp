@@ -11,35 +11,31 @@
 
 
 OmniPositionController::OmniPositionController() :
-	OmniTrajectoryFollower(), x_(0.0), y_(0.0), theta_(0), current_wp_(0)
+	OmniTrajectoryFollower(), x_(0.0), y_(0.0), theta_(0), current_wp_(0),
+	tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_)
 {
 	rclcpp::QoS qos_profile(rclcpp::KeepLast(50));
 	qos_profile.reliable();
 	qos_profile.durability_volatile();
-	this->declare_parameter<bool>("use_ekf", false);
-	bool use_ekf = this->get_parameter("use_ekf").as_bool();
+	this->declare_parameter("base_link_frame", std::string("base_link")); // por default, usar odometría
+	base_frame_ = this->get_parameter("base_link_frame");
 
 	goal_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/goal_pose", 10);
-	if (use_ekf)
-		pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>("/pose", 10, std::bind(&OmniPositionController::getCurrentPoseFromLocalizer, this, std::placeholders::_1));
-	else
-		odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>("/robot/odometry", 10, std::bind(&OmniPositionController::getCurrentPoseFromOdometry, this, std::placeholders::_1));
+
+	while ((this->now().nanoseconds() == 0));
+	position_timer = this->create_wall_timer(std::chrono::milliseconds(10), std::bind(OmniPositionController::getCurrentPose, this));
 }
 
-void OmniPositionController::getCurrentPoseFromOdometry(const nav_msgs::msg::Odometry& odom)
+void getCurrentPose()
 {
-	x_ = odom.pose.pose.position.x;
-	y_ = odom.pose.pose.position.y;
-
-	theta_ = tf2::getYaw(odom.pose.pose.orientation);
-}
-
-void OmniPositionController::getCurrentPoseFromLocalizer(const geometry_msgs::msg::PoseWithCovarianceStamped& pose)
-{
-	x_ = pose.pose.pose.position.x;
-	y_ = pose.pose.pose.position.y;
-
-	theta_ = tf2::getYaw(pose.pose.pose.orientation);
+	try {
+		auto transform = tf_buffer_.lookupTransform("map", base_frame_, tf2::TimePointZero);
+		x_ = transform.transform.translation.x;
+		y_ = transform.transform.translation.y;
+		theta_ = tf2::getYaw(transform.transform.rotation);
+	} catch (tf2::TransformException &ex) {
+		RCLCPP_WARN(this->get_logger(), "No se pudo obtener posición.");
+	}
 }
 
 bool OmniPositionController::getPursuitBasedGoal(double& gx, double& gy, double& ga)
@@ -53,6 +49,7 @@ bool OmniPositionController::getPursuitBasedGoal(double& gx, double& gy, double&
 	
 	double ca = tf2::getYaw(traj.points[current_wp_].transform.rotation);
 	// validamos que ya estamos apuntando a donde se espera antes de buscar el próximo waypoint en el plano x,y
+	// buscamos el próximo punto más cercano que está a distancia lookahead, considerando que el arreglo tiene la trayectoria ordenada por tiempo y, por ende, por posiciones cercanas.
 	if (fabs(angles::normalize_angle(ca - theta_)) < ATOL) {
 		for (size_t i = current_wp_; i < wp_count; i++)
 		{
@@ -109,11 +106,10 @@ bool OmniPositionController::control(const rclcpp::Time& t, double& vx, double& 
 	}
 	w  = KTH * etheta_r;
 
-	// para debugging
+	// para debugging, comparamos posición a la posición deseada
 	RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 333,
 			"t: %.2f, gx: %.2f, gy: %.2f, gth: %.2f, x_: %.2f, y_: %.2f, th_: %.2f", t.seconds(), gx, gy, ga, x_, y_, theta_);
-	// imprimimos las velocidades en un formato csv-friendly, con una espera de 100ms
-	// idem con posiciones esperadas y actuales
+	// ahora en un formato csv-friendly, incluyendo las velocidades
 	/*RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 333,
 			"%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f", t.seconds(), gx, gy, ga, x_, y_, theta_,vx,vy,w);*/
 

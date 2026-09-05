@@ -59,8 +59,9 @@ void OmniOdometry::on_velocity_cmd(const geometry_msgs::msg::Twist::SharedPtr tw
 	/*RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 333,
     "com:%f,%f,%f,%f",
     last_ticks_time.seconds(), vx, vy, w);*/
+
 	// publicamos cada velocidad para cada rueda
-	// T_for es la matriz de transformación para cinemática directa/forward
+	// T_for es la matriz de transformación para cinemática inversa
 	std_msgs::msg::Float64 msg_salida;
 	for (int i = 0; i < WHEEL_COUNT; i++) {
 		msg_salida.data = (vx * T_inv[i][0] + vy * T_inv[i][1] + w * T_inv[i][2]);
@@ -83,9 +84,10 @@ void OmniOdometry::on_encoder_ticks(const robmovil_msgs::msg::MultiEncoderTicks:
 	}
 
 	// reportamos las lecturas de encoder para cada rueda
-	/*RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 100,
+	/*RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 333,
     "tck1=%d tck2=%d tck3=%d tck4=%d",
     encoder->ticks[0], encoder->ticks[1], encoder->ticks[2], encoder->ticks[3]);*/
+
 	/* Utilizar este delta de tiempo entre momentos */
 	rclcpp::Time current_time(encoder->header.stamp);
 
@@ -95,8 +97,9 @@ void OmniOdometry::on_encoder_ticks(const robmovil_msgs::msg::MultiEncoderTicks:
 	for (int i = 0; i < WHEEL_COUNT; i++) {
 		// convertimos la diferencia de ticks de encoder a radianes y dividimos por el tiempo transcurrido, para obtener la velocidad angular de la rueda
 		double wheel_angular_vel = (rads_per_tick * (encoder->ticks[i] - last_ticks_[i])) / delta_t;
+
 		// calculamos las distintas velocidades del robot usando la matriz de
-		// transformación de cinemática inversa definida en la ecuación 21
+		// transformación de cinemática directa definida en la ecuación 21
 		vx += wheel_angular_vel * T_for[0][i];
 		vy += wheel_angular_vel * T_for[1][i];
 		w  += wheel_angular_vel * T_for[2][i];

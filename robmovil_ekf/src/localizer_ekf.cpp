@@ -9,10 +9,10 @@ robmovil_ekf::LocalizerEKF::LocalizerEKF(void) : EKFilter(3, 3, 3, 2, 2)
   delta_t = 0;
 
   /* estado inicial */
-  Vector x0(3);
-  x0(1) = 0;
-  x0(2) = 0;
-  x0(3) = 0;
+  Vector x0(3); // sería mejor obtener la posición inicial como parámetro, o determinarla con el primer sensado
+  x0(1) = -2;
+  x0(2) = 2;
+  x0(3) = 1.57;
 
   /* covarianza inicial */
   Matrix P(3, 3);
@@ -36,7 +36,7 @@ robmovil_ekf::LocalizerEKF::LocalizerEKF(void) : EKFilter(3, 3, 3, 2, 2)
 void robmovil_ekf::LocalizerEKF::set_map(const geometry_msgs::msg::PoseArray::SharedPtr posts)
 {
   /* Nota: Se asume x = 0, el origen de coordenadas del mapa comienza donde el robot esta ahora,
-   * los landmarks se guardar en relacion al mapa */
+   * los landmarks se guardan en relacion al mapa */
   map_landmarks.clear();
   for (const auto& pose : posts->poses) {
 	  tf2::Vector3 landmark(pose.position.x, pose.position.y, 0);
@@ -117,17 +117,18 @@ void robmovil_ekf::LocalizerEKF::makeBaseW(void)
 }
 
 /** covarianza de W (ruido en f) */
+// acá usamos 0.04 y 0.07^2, mientras que en la cursada usamos 0.001 y 0.02^2. Es decir, consideramos que la odometría es menos confiable
 void robmovil_ekf::LocalizerEKF::makeBaseQ()
 {
-  Q(1,1) = 0.04; // Var(w1) = 0.1^2 (1 milimetro de desvio estandar)
+  Q(1,1) = 0.04;
   Q(1,2) = 0;
   Q(1,3) = 0;
   Q(2,1) = 0;
-  Q(2,2) = 0.04; // Var(w2) = 0.1^2
+  Q(2,2) = 0.04;
   Q(2,3) = 0;
   Q(3,1) = 0;
   Q(3,2) = 0;
-  Q(3,3) = pow(0.07,2); // Var(w3) = 0.1^2
+  Q(3,3) = pow(0.07,2);
 }
 
 /** Jacobiano de H respecto del modelo de sensado (h) (valores iniciales) **/
@@ -190,6 +191,7 @@ void robmovil_ekf::LocalizerEKF::makeBaseV(void)
 }
 
 /** Covarianza de v **/
+// acá mantuvimos la covarianza original usada en la cursada
 void robmovil_ekf::LocalizerEKF::makeBaseR()
 {
   R(1,1) = 0.001; // Original
