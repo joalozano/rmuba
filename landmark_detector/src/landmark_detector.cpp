@@ -19,17 +19,6 @@ robmovil_ekf::LandmarkDetector::LandmarkDetector() :
 	laser_sub = this->create_subscription<sensor_msgs::msg::LaserScan>( "/robot/front_laser/scan", rclcpp::QoS(10), std::bind(&LandmarkDetector::on_laser_scan, this, std::placeholders::_1));
 	landmark_pub = this->create_publisher<robmovil_msgs::msg::LandmarkArray>("/landmarks", rclcpp::QoS(10));
 	pointcloud_pub = this->create_publisher<sensor_msgs::msg::PointCloud>("/landmarks_pointcloud", rclcpp::QoS(10));
-
-	
-	this->declare_parameter("robot_frame", std::string("base_link"));
-	this->declare_parameter("publish_robot_frame", std::string("base_link_ekf"));
-	this->declare_parameter("laser_frame", std::string("front_laser"));
-
-	this->get_parameter("robot_frame", robot_frame);
-	this->get_parameter("publish_robot_frame", publish_robot_frame);
-	this->get_parameter("laser_frame", laser_frame);
-
-	//RCLCPP_INFO(this->get_logger(), "Publishing to frame	%s", publish_robot_frame.c_str());
 }
 
 float dist2(tf2::Vector3 *p1, tf2::Vector3 *p2) {
@@ -86,7 +75,7 @@ inline void procesar_puntos_y_agregar_landmark(std::vector<tf2::Vector3>& landma
 void robmovil_ekf::LandmarkDetector::on_laser_scan(const sensor_msgs::msg::LaserScan::SharedPtr msg)
 {
 	if(!update_laser_tf(msg->header.stamp)){
-		RCLCPP_WARN(this->get_logger(), "%s -> %s transform not yet received, not publishing landmarks", laser_frame.c_str(), robot_frame.c_str());
+		RCLCPP_WARN(this->get_logger(), "laser -> base_link transform not yet received, not publishing landmarks");
 		return;
 	}
 
@@ -122,7 +111,7 @@ void robmovil_ekf::LandmarkDetector::on_laser_scan(const sensor_msgs::msg::Laser
 	/* Mensaje del arreglo de landmarks detectados */
 	robmovil_msgs::msg::LandmarkArray landmark_array;
 	landmark_array.header.stamp = msg->header.stamp;
-	landmark_array.header.frame_id = publish_robot_frame;
+	landmark_array.header.frame_id = "base_link_ekf";
 	
 	/* VECTORES AUXILIARES: Pueden utilizar landmark_points para ir acumulando
 	 * mediciones cercanas */
@@ -161,14 +150,13 @@ bool robmovil_ekf::LandmarkDetector::update_laser_tf(const rclcpp::Time& require
 {
 	try
 	{
-		geometry_msgs::msg::TransformStamped transformStamped = tf_buffer.lookupTransform(robot_frame, laser_frame, required_time, tf2::durationFromSec(0.1));
+		geometry_msgs::msg::TransformStamped transformStamped = tf_buffer.lookupTransform("base_link", "laser", required_time, tf2::durationFromSec(0.1));
 		tf2::fromMsg(transformStamped.transform, laser_transform);
 		return true;
 	}
 	catch (tf2::TransformException &ex)
 	{
-		RCLCPP_WARN(this->get_logger(), "No se pudo transformar %s a %s: %s",
-		          robot_frame.c_str(), laser_frame.c_str(), ex.what());
+		RCLCPP_WARN(this->get_logger(), "No se pudo transformar base_link a laser: %s", ex.what());
 		return false;
 	}
 }
