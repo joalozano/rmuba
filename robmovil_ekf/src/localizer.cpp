@@ -10,7 +10,7 @@ robmovil_ekf::Localizer::Localizer() :
 
 	// Get node parameters
 	this->declare_parameter("base_link_frame", std::string("base_link_ekf"));
-	this->declare_parameter("ekf_frame", std::string("odom"));
+	this->declare_parameter("ekf_frame", std::string("map"));
 	this->declare_parameter("laser_frame", std::string("laser"));
 	this->declare_parameter("only_prediction", false);
 	this->declare_parameter("min_landmark_size", 2);
@@ -114,13 +114,13 @@ void robmovil_ekf::Localizer::on_odometry(const nav_msgs::msg::Odometry::SharedP
 
 void robmovil_ekf::Localizer::on_posts(const geometry_msgs::msg::PoseArray::SharedPtr posts)
 {
+	// esto está para manejar cuando map_frame_ != "map" (por ej, odom)
 	geometry_msgs::msg::TransformStamped map_to_base_link;
 	try {
 	  map_to_base_link = tf_buffer_.lookupTransform(
 	      map_frame_, posts->header.frame_id, posts->header.stamp, tf2::durationFromSec(1.0));
 	} catch (tf2::TransformException& ex) {
 	  RCLCPP_WARN(this->get_logger(),
-	              "No pude obtener map->odom en el stamp de /posts (%s)",
 	              ex.what());
 	}
 
@@ -200,7 +200,7 @@ void robmovil_ekf::Localizer::publish_estimate(const rclcpp::Time& now)
 	// publish TF transform: map -> base_link_ekf (directo, segun pide el enunciado)
 	geometry_msgs::msg::TransformStamped map_to_base_link_msg;
 	map_to_base_link_msg.header.stamp = now;
-	map_to_base_link_msg.header.frame_id = "map";
+	map_to_base_link_msg.header.frame_id = map_frame_;
 	map_to_base_link_msg.child_frame_id = base_frame_;
 	map_to_base_link_msg.transform = tf2::toMsg(map_to_base_link);
 

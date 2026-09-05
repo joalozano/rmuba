@@ -17,31 +17,25 @@ OmniPositionController::OmniPositionController() :
 	rclcpp::QoS qos_profile(rclcpp::KeepLast(50));
 	qos_profile.reliable();
 	qos_profile.durability_volatile();
-	this->declare_parameter<bool>("use_ekf", false);
-	bool use_ekf = this->get_parameter("use_ekf").as_bool();
+	this->declare_parameter("base_link_frame", std::string("base_link")); // por default, usar odometría
+	base_frame_ = this->get_parameter("base_link_frame");
 
 	goal_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/goal_pose", 10);
-	if (use_ekf)
-		pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>("/pose", 10, std::bind(&OmniPositionController::getCurrentPoseFromLocalizer, this, std::placeholders::_1));
-	else
-		odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>("/robot/odometry", 10, std::bind(&OmniPositionController::getCurrentPoseFromOdometry, this, std::placeholders::_1));
+
+	while ((this->now().nanoseconds() == 0));
+	position_timer = this->create_wall_timer(std::chrono::milliseconds(10), std::bind(OmniPositionController::getCurrentPose, this));
 }
 
-void OmniPositionController::getCurrentPoseFromOdometry(const nav_msgs::msg::Odometry& odom)
+void getCurrentPose()
 {
-	x_ = odom.pose.pose.position.x;
-	y_ = odom.pose.pose.position.y;
-
-	theta_ = tf2::getYaw(odom.pose.pose.orientation);
-}
-
-void OmniPositionController::getCurrentPoseFromLocalizer(const geometry_msgs::msg::PoseWithCovarianceStamped& pose)
-{
-	geometry_msgs::msg::PoseWithCovarianceStamped pose_odom;
-
-	x_ = pose.pose.pose.position.x;
-	y_ = pose.pose.pose.position.y;
-	theta_ = tf2::getYaw(pose.pose.pose.orientation);
+	try {
+		auto transform = tf_buffer_.lookupTransform("map", base_frame_, tf2::TimePointZero);
+		x_ = transform.transform.translation.x;
+		y_ = transform.transform.translation.y;
+		theta_ = tf2::getYaw(transform.transform.rotation);
+	} catch (tf2::TransformException &ex) {
+		RCLCPP_WARN(this->get_logger(), "No se pudo obtener posición.");
+	}
 }
 
 bool OmniPositionController::getPursuitBasedGoal(double& gx, double& gy, double& ga)

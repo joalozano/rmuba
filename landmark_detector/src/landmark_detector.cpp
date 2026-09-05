@@ -22,7 +22,7 @@ robmovil_ekf::LandmarkDetector::LandmarkDetector() :
 
 	
 	this->declare_parameter("robot_frame", std::string("base_link"));
-	this->declare_parameter("publish_robot_frame", std::string("base_link"));
+	this->declare_parameter("publish_robot_frame", std::string("base_link_ekf"));
 	this->declare_parameter("laser_frame", std::string("front_laser"));
 
 	this->get_parameter("robot_frame", robot_frame);
@@ -106,7 +106,7 @@ void robmovil_ekf::LandmarkDetector::on_laser_scan(const sensor_msgs::msg::Laser
 
 		float angle_min = msg->angle_min;
 		float angle_increment = msg->angle_increment;
-	float angle = angle_min + angle_increment * i;
+		float angle = angle_min + angle_increment * i;
 	
 		/* COMPLETAR: p debe definirse con informacion valida y 
 		 * en coordenadas cartesianas */

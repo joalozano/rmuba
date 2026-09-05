@@ -24,22 +24,21 @@ protected:
 private:
 
 	rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr goal_pub_;
-	rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
-	rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_sub_;
 
 	// La trayectoria (/robot/trajectory) esta expresada en frame "odom", pero /pose
 	// (salida del localizer EKF) esta en frame "map" (map -> base_link_ekf). Hace
 	// falta transformar antes de comparar contra los waypoints.
 	tf2_ros::Buffer tf_buffer_;
 	tf2_ros::TransformListener tf_listener_;
+	std::string base_frame_;
+	rclcpp::TimerBase::SharedPtr position_timer;
 
 	int current_wp_ = 0;
 	double x_ = 0.0;
 	double y_ = 0.0;
 	double theta_ = 0.0;
 
-	void getCurrentPoseFromOdometry(const nav_msgs::msg::Odometry& odom);
-	void getCurrentPoseFromLocalizer(const geometry_msgs::msg::PoseWithCovarianceStamped& pose);
+	void getCurrentPose();
 
 	// Implementaremos únicamente pursuit-based trajectories para el TP
 	bool getPursuitBasedGoal(double& gx, double& gy, double& ga);

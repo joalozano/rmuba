@@ -11,7 +11,10 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <angles/angles.h>
 
-// este módulo es una modificación del módulo usado dentro de la cursada. Se eliminaron las trayectorias time-based y las sinoidales, para proveer únicamente trayectorias basadas en splines
+/* este módulo es una modificación del módulo usado dentro de la cursada.
+ * Se eliminaron las trayectorias time-based y las sinoidales, para proveer únicamente trayectorias basadas en splines
+ * Las trayectorias están en el marco "map", mientras que en la cursada estaban en el marco "odom"
+ */
 
 void build_spline_trajectory(double, std::vector<std::vector<double>>&, robmovil_msgs::msg::Trajectory&, nav_msgs::msg::Path&);
 inline void compute_waypoint_velocities(std::vector<std::vector<double>>& wpoints, int wpoint_count);
@@ -29,11 +32,11 @@ int main(int argc, char** argv)
 
 	robmovil_msgs::msg::Trajectory traj_msg;
 	traj_msg.header.stamp = node->now();
-	traj_msg.header.frame_id = "odom";
+	traj_msg.header.frame_id = "map";
 
 	nav_msgs::msg::Path path_msg;
 	path_msg.header.stamp = node->now();
-	path_msg.header.frame_id = "odom";
+	path_msg.header.frame_id = "map";
 	
 	// generamos la trayectoria con splines a partir de puntos fijados por el usuario en launch.py
 	// los datos almacenados son t, x, y, theta, de forma que por cada waypoint debe haber cuatro valores en spline_waypoints_data

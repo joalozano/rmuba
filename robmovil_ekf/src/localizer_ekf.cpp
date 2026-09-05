@@ -9,10 +9,10 @@ robmovil_ekf::LocalizerEKF::LocalizerEKF(void) : EKFilter(3, 3, 3, 2, 2)
   delta_t = 0;
 
   /* estado inicial */
-  Vector x0(3);
-  x0(1) = 0;
-  x0(2) = 0;
-  x0(3) = 0;
+  Vector x0(3); // sería mejor obtener la posición inicial como parámetro, o determinarla con el primer sensado
+  x0(1) = -2;
+  x0(2) = 2;
+  x0(3) = 1.57;
 
   /* covarianza inicial */
   Matrix P(3, 3);
