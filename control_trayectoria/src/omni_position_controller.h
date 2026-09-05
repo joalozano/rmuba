@@ -12,6 +12,8 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/buffer.h>
 
+// casi el mismo módulo que el usado durante la cátedra. Ahora la pose es derivada de un robot_frame, agnóstico a cómo se obtiene la estimación (si es por odometría o por ekf)
+
 class OmniPositionController : public OmniTrajectoryFollower
 {
 public:
@@ -25,12 +27,9 @@ private:
 
 	rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr goal_pub_;
 
-	// La trayectoria (/robot/trajectory) esta expresada en frame "odom", pero /pose
-	// (salida del localizer EKF) esta en frame "map" (map -> base_link_ekf). Hace
-	// falta transformar antes de comparar contra los waypoints.
 	tf2_ros::Buffer tf_buffer_;
 	tf2_ros::TransformListener tf_listener_;
-	std::string base_frame_;
+	std::string base_frame_; // frame del robot (base_link para odom o base_link_ekf para ekf)
 	rclcpp::TimerBase::SharedPtr position_timer;
 
 	int current_wp_ = 0;
@@ -48,7 +47,7 @@ private:
 	{
 		geometry_msgs::msg::PoseStamped goal;
 
-		goal.header.frame_id = "odom";
+		goal.header.frame_id = "map";
 		goal.header.stamp = t;
 		goal.pose.position.x = goal_x;
 		goal.pose.position.y = goal_y;

@@ -94,18 +94,18 @@ void robmovil_ekf::LandmarkDetector::on_laser_scan(const sensor_msgs::msg::Laser
 	 * Descartando aquellas mediciones por fuera de los rangos validos */
 	std::vector<tf2::Vector3> cartesian;
 	
+	float range_min = msg->range_min;
+	float range_max = msg->range_max;
+	float angle_min = msg->angle_min;
+	float angle_increment = msg->angle_increment;
 	for (int i = 0; i < msg->ranges.size(); i++)
 	{
 		/* Utilizar la informacion del mensaje para filtrar y convertir */
 		float range = msg->ranges[i];
-		float range_min = msg->range_min;
-		float range_max = msg->range_max;
 		
-	if (range > range_max || range < range_min)
-		continue;
+		if (range > range_max || range < range_min)
+			continue;
 
-		float angle_min = msg->angle_min;
-		float angle_increment = msg->angle_increment;
 		float angle = angle_min + angle_increment * i;
 	
 		/* COMPLETAR: p debe definirse con informacion valida y 

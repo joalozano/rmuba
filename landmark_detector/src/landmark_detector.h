@@ -35,7 +35,7 @@ namespace robmovil_ekf
       rclcpp::Publisher<robmovil_msgs::msg::LandmarkArray>::SharedPtr landmark_pub;
       rclcpp::Publisher<sensor_msgs::msg::PointCloud>::SharedPtr pointcloud_pub;
 
-      std::string robot_frame, laser_frame, publish_robot_frame;
+      std::string publish_robot_frame, robot_frame, laser_frame;
 
       tf2_ros::Buffer tf_buffer;
       tf2_ros::TransformListener tf_listener;
