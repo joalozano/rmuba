@@ -35,9 +35,10 @@ void OmniPositionController::getCurrentPose()
 		x_ = transform.transform.translation.x;
 		y_ = transform.transform.translation.y;
 		theta_ = tf2::getYaw(transform.transform.rotation);
-		RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 333,
+		// Debugging print para comparar gt_pose vs pose; usamos throttle para no tener un millón de filas, y sólo 1 cada 0.333ms
+		/*RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 333,
 		"%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f",
-		this->get_clock()->now().seconds(), gt.transform.translation.x, gt.transform.translation.y, tf2::getYaw(gt.transform.rotation), x_, y_, theta_);
+		this->get_clock()->now().seconds(), gt.transform.translation.x, gt.transform.translation.y, tf2::getYaw(gt.transform.rotation), x_, y_, theta_);*/
 
 	} catch (tf2::TransformException &ex) {
 		RCLCPP_WARN(this->get_logger(), "No se pudo obtener posición.");
