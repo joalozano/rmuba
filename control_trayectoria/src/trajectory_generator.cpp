@@ -40,7 +40,7 @@ int main(int argc, char** argv)
 	
 	// generamos la trayectoria con splines a partir de puntos fijados por el usuario en launch.py
 	// los datos almacenados son t, x, y, theta, de forma que por cada waypoint debe haber cuatro valores en spline_waypoints_data
-	std::vector<double> spline_waypoints_data = node->declare_parameter<std::vector<double>>("spline_waypoints", {});
+	std::vector<double> spline_waypoints_data = node->declare_parameter<std::vector<double>>("spline_waypoints", std::vector<double>());
 	
 	// si no se definió algún waypoint o si falta algún dato para algún waypoint, arrojamos un error.
 	if (spline_waypoints_data.size() == 0 || spline_waypoints_data.size() % 4 != 0) {
